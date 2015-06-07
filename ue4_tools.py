@@ -31,7 +31,7 @@ class SourceData():
     mesh_objects = []
     failed_mesh_objects = []
 
-class SaveMode():
+class SaveState():
     def __init__(self, context):
         self.active = context.object
         self.select = context.selected_objects
@@ -491,6 +491,74 @@ def evaluate_and_get_source_data(objects):
 
     return source_data
 
+def move_root(scene, obj):
+
+    # Deselect all and select the rig
+    bpy.ops.object.select_all(action='DESELECT')
+    scene.objects.active = obj
+    obj.select = True
+
+    # Bake first
+    bpy.ops.nla.bake(frame_start=scene.frame_start, 
+            frame_end=scene.frame_end, 
+            only_selected=False, 
+            visual_keying=True, 
+            clear_constraints=True, 
+            bake_types={'POSE'})
+
+    obj.animation_data.action.name = 'ZZ_EXPORT_TEMP_0'
+
+    # Duplicate export rig
+    temp_ob = obj.copy()
+    temp_ob.data = obj.data.copy()
+    scene.objects.link(temp_ob)
+    temp_ob.select = False
+
+    # Go to pose mode
+    bpy.ops.object.mode_set(mode='POSE')
+
+    # Shorten path
+    bones = obj.data.bones
+    pose_bones = obj.pose.bones
+    
+    # Root follow hips but only x and y axis
+    bones.active = bones['root']
+    bpy.ops.pose.constraint_add(type="COPY_LOCATION")
+    pose_bones['root'].constraints['Copy Location'].target = temp_ob
+    pose_bones['root'].constraints['Copy Location'].subtarget = 'DEF-hips'
+    pose_bones['root'].constraints['Copy Location'].use_z = False
+    
+    # Hips follow original hips
+    bones.active = bones['DEF-hips']
+    bpy.ops.pose.constraint_add(type="COPY_LOCATION")
+    pose_bones['DEF-hips'].constraints['Copy Location'].target = temp_ob
+    pose_bones['DEF-hips'].constraints['Copy Location'].subtarget = 'DEF-hips'
+    
+    # Bake again!
+    bpy.ops.nla.bake(frame_start=scene.frame_start, 
+            frame_end=scene.frame_end, 
+            only_selected=False, 
+            visual_keying=True, 
+            clear_constraints=True, 
+            bake_types={'POSE'})   
+
+    obj.animation_data.action.name = 'ZZ_EXPORT_TEMP_1'
+
+    # Back to object mode
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    # Select temp object
+    scene.objects.active = temp_ob
+    obj.select = False
+    temp_ob.select = True
+
+    # Delete temp object
+    bpy.ops.object.delete()
+
+    # Select back original object
+    scene.objects.active = obj
+    obj.select = True
+
 class UE4HelperPanel(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
@@ -552,7 +620,13 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
                 ('ACTION', "Action length", ""),
                 ('ACTION_MINUS_ONE', "Action length - 1 frame (loop animation)", ""),
                 ), 
-            default='ACTION_MINUS_ONE',
+            default='ACTION',
+            )
+
+    hip_to_root = BoolProperty(
+            name="Convert Hip XY location to Root location",
+            description="Useful if you want to use root motion on UE4", 
+            default=False,
             )
 
     @classmethod
@@ -567,18 +641,22 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
         layout.prop(self, "use_humanoid_name")
         layout.label(text="Timeframe of the action:")
         layout.prop(self, "timeframe", "")
+        layout.prop(self, "hip_to_root")
 
     def execute(self, context):
         if not self.filepath:
             raise Exception("filepath not set")
 
         # Create save system to save current selection, mode, and active object
-        save = SaveMode(context)
+        state = SaveState(context)
 
         scene = context.scene
 
         # Active object is source rigify object
         rig_obj = context.object
+
+        # Go to object mode first
+        #bpy.ops.object.mode_set(mode='OBJECT')
 
         # Check action
         action = rig_obj.animation_data.action
@@ -611,19 +689,24 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
         export_rig_ob.select = True
         scene.objects.active = export_rig_ob
 
-        # Retarget bone name
-        if self.use_humanoid_name:
-            retarget_bone_name(export_rig_ob)
-
         # Set timeframe
-        if self.timeframe == 'SCENE':
-            start = scene.frame_start
-            end = scene.frame_end
-        else:
+        #if self.timeframe == 'SCENE':
+        #    start = scene.frame_start
+        #    end = scene.frame_end
+        #else:
+        if self.timeframe != 'SCENE':
             scene.frame_start = action.frame_range[0]
             scene.frame_end = action.frame_range[1]
             if self.timeframe == 'ACTION_MINUS_ONE':
                 scene.frame_end -= 1
+
+        # Manual bake action if want to edit root bone
+        if self.hip_to_root:
+            move_root(scene, export_rig_ob)
+
+        # Retarget bone name
+        if self.use_humanoid_name:
+            retarget_bone_name(export_rig_ob)
 
         # Set Global Matrix
         forward = '-Y'
@@ -645,7 +728,7 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
                 bake_anim_use_nla_strips=False,
                 bake_anim_use_all_actions=False,
                 bake_anim_step=1.0,
-                bake_anim_simplify_factor=1.0,
+                bake_anim_simplify_factor=0.0,
                 add_leaf_bones=False,
                 primary_bone_axis='Y',
                 secondary_bone_axis='X',
@@ -665,7 +748,7 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
         rig_obj.scale /= self.global_scale
 
         # Load original state
-        save.load(context)
+        state.load(context)
 
         return {'FINISHED'}
 
@@ -715,14 +798,14 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
             raise Exception("filepath not set")
 
         # Create save system to save current selection, mode, and active object
-        save = SaveMode(context)
+        state = SaveState(context)
 
         # Evaluate selected objects to export
         source_data = evaluate_and_get_source_data(context.selected_objects)
 
         # If evaluate returns string it means error
         if type(source_data) is str:
-            save.load(context)
+            state.load(context)
             self.report({'ERROR'}, source_data)
             return{'CANCELLED'}
 
@@ -733,7 +816,7 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
 
         # If returns string it means error
         if type(export_rig_ob) is str:
-            save.load(context)
+            state.load(context)
             self.report({'ERROR'}, export_rig_ob)
             return{'CANCELLED'}
 
@@ -790,7 +873,7 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
         bpy.ops.object.delete()
 
         # Bring back original selection
-        save.load(context)
+        state.load(context)
 
         # Failed export objects
         #if any(source_data.failed_mesh_objects):
