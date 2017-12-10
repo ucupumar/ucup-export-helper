@@ -2,7 +2,7 @@ bl_info = {
     "name": "Unreal Engine 4 Export Helper",
     "author": "Yusuf Umar",
     "version": (0, 0, 0),
-    "blender": (2, 74, 0),
+    "blender": (2, 79, 0),
     "location": "View 3D > Tool Shelf > UE4 Helper",
     "description": "Tool to help exporting something to UE4 less pain in the a**",
     "wiki_url": "http://twitter.com/ucupumar",
@@ -25,6 +25,9 @@ from bpy_extras.io_utils import (ExportHelper,
                                  ) 
 
 #IOFBXOrientationHelper = orientation_helper_factory("IOFBXOrientationHelper", axis_forward='-Z', axis_up='Y')
+
+# Difference of scaling between Blender and Unreal
+ABS_SCALE = 100.0
 
 def get_addon_filepath():
 
@@ -150,210 +153,72 @@ class SaveState():
         scene.frame_start = self.frame_start
         scene.frame_end = self.frame_end
 
-parent_dict = {
-        'DEF-hips' : 'root',
-        'DEF-spine' : 'DEF-hips',
-        'DEF-chest' : 'DEF-spine',
-        'DEF-neck' : 'DEF-chest',
-        'DEF-head' : 'DEF-neck',
-        
-        # LEFT
-
-        'DEF-shoulder.L' : 'DEF-chest',
-        'DEF-upper_arm.01.L' : 'DEF-shoulder.L',
-        'DEF-upper_arm.02.L' : 'DEF-upper_arm.01.L',
-        'DEF-forearm.01.L' : 'DEF-upper_arm.02.L',
-        'DEF-forearm.02.L' : 'DEF-forearm.01.L',
-        'DEF-hand.L' : 'DEF-forearm.02.L',
-        
-        'DEF-palm.04.L' : 'DEF-hand.L',
-        'DEF-palm.03.L' : 'DEF-hand.L',
-        'DEF-palm.02.L' : 'DEF-hand.L',
-        'DEF-palm.01.L' : 'DEF-hand.L',
-        
-        'DEF-f_pinky.01.L.01' : 'DEF-palm.04.L',
-        'DEF-f_pinky.01.L.02' : 'DEF-f_pinky.01.L.01',
-        'DEF-f_pinky.02.L' : 'DEF-f_pinky.01.L.02',
-        'DEF-f_pinky.03.L' : 'DEF-f_pinky.02.L',
-        
-        'DEF-f_ring.01.L.01' : 'DEF-palm.03.L',
-        'DEF-f_ring.01.L.02' : 'DEF-f_ring.01.L.01',
-        'DEF-f_ring.02.L' : 'DEF-f_ring.01.L.02',
-        'DEF-f_ring.03.L' : 'DEF-f_ring.02.L',
-        
-        'DEF-f_middle.01.L.01' : 'DEF-palm.02.L',
-        'DEF-f_middle.01.L.02' : 'DEF-f_middle.01.L.01',
-        'DEF-f_middle.02.L' : 'DEF-f_middle.01.L.02',
-        'DEF-f_middle.03.L' : 'DEF-f_middle.02.L',
-
-        'DEF-f_index.01.L.01' : 'DEF-palm.01.L',
-        'DEF-f_index.01.L.02' : 'DEF-f_index.01.L.01',
-        'DEF-f_index.02.L' : 'DEF-f_index.01.L.02',
-        'DEF-f_index.03.L' : 'DEF-f_index.02.L',
-
-        'DEF-thumb.01.L.01' : 'DEF-hand.L',
-        'DEF-thumb.01.L.02' : 'DEF-thumb.01.L.01',
-        'DEF-thumb.02.L' : 'DEF-thumb.01.L.02',
-        'DEF-thumb.03.L' : 'DEF-thumb.02.L',
-        
-        'DEF-thigh.01.L' : 'DEF-hips',
-        'DEF-thigh.02.L' : 'DEF-thigh.01.L',
-        'DEF-shin.01.L' : 'DEF-thigh.02.L',
-        'DEF-shin.02.L' : 'DEF-shin.01.L',
-        
-        'DEF-foot.L' : 'DEF-shin.02.L',
-        'DEF-toe.L' : 'DEF-foot.L',
-
-        # RIGHT
-
-        'DEF-shoulder.R' : 'DEF-chest',
-        'DEF-upper_arm.01.R' : 'DEF-shoulder.R',
-        'DEF-upper_arm.02.R' : 'DEF-upper_arm.01.R',
-        'DEF-forearm.01.R' : 'DEF-upper_arm.02.R',
-        'DEF-forearm.02.R' : 'DEF-forearm.01.R',
-        'DEF-hand.R' : 'DEF-forearm.02.R',
-        
-        'DEF-palm.04.R' : 'DEF-hand.R',
-        'DEF-palm.03.R' : 'DEF-hand.R',
-        'DEF-palm.02.R' : 'DEF-hand.R',
-        'DEF-palm.01.R' : 'DEF-hand.R',
-        
-        'DEF-f_pinky.01.R.01' : 'DEF-palm.04.R',
-        'DEF-f_pinky.01.R.02' : 'DEF-f_pinky.01.R.01',
-        'DEF-f_pinky.02.R' : 'DEF-f_pinky.01.R.02',
-        'DEF-f_pinky.03.R' : 'DEF-f_pinky.02.R',
-        
-        'DEF-f_ring.01.R.01' : 'DEF-palm.03.R',
-        'DEF-f_ring.01.R.02' : 'DEF-f_ring.01.R.01',
-        'DEF-f_ring.02.R' : 'DEF-f_ring.01.R.02',
-        'DEF-f_ring.03.R' : 'DEF-f_ring.02.R',
-        
-        'DEF-f_middle.01.R.01' : 'DEF-palm.02.R',
-        'DEF-f_middle.01.R.02' : 'DEF-f_middle.01.R.01',
-        'DEF-f_middle.02.R' : 'DEF-f_middle.01.R.02',
-        'DEF-f_middle.03.R' : 'DEF-f_middle.02.R',
-
-        'DEF-f_index.01.R.01' : 'DEF-palm.01.R',
-        'DEF-f_index.01.R.02' : 'DEF-f_index.01.R.01',
-        'DEF-f_index.02.R' : 'DEF-f_index.01.R.02',
-        'DEF-f_index.03.R' : 'DEF-f_index.02.R',
-
-        'DEF-thumb.01.R.01' : 'DEF-hand.R',
-        'DEF-thumb.01.R.02' : 'DEF-thumb.01.R.01',
-        'DEF-thumb.02.R' : 'DEF-thumb.01.R.02',
-        'DEF-thumb.03.R' : 'DEF-thumb.02.R',
-        
-        'DEF-thigh.01.R' : 'DEF-hips',
-        'DEF-thigh.02.R' : 'DEF-thigh.01.R',
-        'DEF-shin.01.R' : 'DEF-thigh.02.R',
-        'DEF-shin.02.R' : 'DEF-shin.01.R',
-        
-        'DEF-foot.R' : 'DEF-shin.02.R',
-        'DEF-toe.R' : 'DEF-foot.R',
-        }
-
 retarget_dict = {
         'root'                : 'Root'                  , 
-        'DEF-hips'            : 'pelvis'                , 
-        'DEF-spine'           : 'spine_01'              , 
-        'DEF-chest'           : 'spine_02'              , 
-        'DEF-neck'            : 'neck_01'               , 
-        'DEF-head'            : 'head'                  , 
+        'DEF-spine'           : 'pelvis'                , 
+        'DEF-spine.001'       : 'spine_01'              , 
+        'DEF-spine.002'       : 'spine_02'              , 
+        'DEF-spine.003'       : 'spine_03'              , 
+        'DEF-spine.004'       : 'neck_01'               , 
+        'DEF-spine.005'       : 'head'                  , 
 
         # LEFT                                           
         'DEF-shoulder.L'      : 'clavicle_l'            , 
-        'DEF-upper_arm.01.L'  : 'upperarm_twist_01_l'   ,
-        'DEF-upper_arm.02.L'  : 'upperarm_l'            , 
-        'DEF-forearm.01.L'    : 'lowerarm_l'            , 
-        'DEF-forearm.02.L'    : 'lowerarm_twist_01_l'   , 
+        'DEF-upper_arm.L'     : 'upperarm_twist_01_l'   ,
+        'DEF-upper_arm.L.001' : 'upperarm_l'            , 
+        'DEF-forearm.L'       : 'lowerarm_l'            , 
+        'DEF-forearm.L.001'   : 'lowerarm_twist_01_l'   , 
         'DEF-hand.L'          : 'hand_l'                , 
-        'DEF-f_pinky.01.L.01' : 'pinky_01_l'            , 
+        'DEF-f_pinky.01.L'    : 'pinky_01_l'            , 
         'DEF-f_pinky.02.L'    : 'pinky_02_l'            , 
         'DEF-f_pinky.03.L'    : 'pinky_03_l'            , 
-        'DEF-f_ring.01.L.01'  : 'ring_01_l'             , 
+        'DEF-f_ring.01.L'     : 'ring_01_l'             , 
         'DEF-f_ring.02.L'     : 'ring_02_l'             , 
         'DEF-f_ring.03.L'     : 'ring_03_l'             , 
-        'DEF-f_middle.01.L.01': 'middle_01_l'           , 
+        'DEF-f_middle.01.L'   : 'middle_01_l'           , 
         'DEF-f_middle.02.L'   : 'middle_02_l'           , 
         'DEF-f_middle.03.L'   : 'middle_03_l'           , 
-        'DEF-f_index.01.L.01' : 'index_01_l'            , 
+        'DEF-f_index.01.L'    : 'index_01_l'            , 
         'DEF-f_index.02.L'    : 'index_02_l'            , 
         'DEF-f_index.03.L'    : 'index_03_l'            , 
-        'DEF-thumb.01.L.01'   : 'thumb_01_l'            , 
+        'DEF-thumb.01.L'      : 'thumb_01_l'            , 
         'DEF-thumb.02.L'      : 'thumb_02_l'            , 
         'DEF-thumb.03.L'      : 'thumb_03_l'            , 
-        'DEF-thigh.01.L'      : 'thigh_l'               ,
-        'DEF-thigh.02.L'      : 'thigh_twist_01_l'      , 
-        'DEF-shin.01.L'       : 'calf_l'                , 
-        'DEF-shin.02.L'       : 'calf_twist_01_l'       , 
+        'DEF-thigh.L'         : 'thigh_twist_01_l'      , 
+        'DEF-thigh.L.001'     : 'thigh_l'               ,
+        'DEF-shin.L'          : 'calf_l'                , 
+        'DEF-shin.L.001'      : 'calf_twist_01_l'       , 
         'DEF-foot.L'          : 'foot_l'                , 
         'DEF-toe.L'           : 'ball_l'                , 
         
         # RIGHT                                          
         'DEF-shoulder.R'      : 'clavicle_r'            , 
-        'DEF-upper_arm.01.R'  : 'upperarm_twist_01_r'   ,
-        'DEF-upper_arm.02.R'  : 'upperarm_r'            , 
-        'DEF-forearm.01.R'    : 'lowerarm_r'            , 
-        'DEF-forearm.02.R'    : 'lowerarm_twist_01_r'   , 
+        'DEF-upper_arm.R'     : 'upperarm_twist_01_r'   ,
+        'DEF-upper_arm.R.001' : 'upperarm_r'            , 
+        'DEF-forearm.R'       : 'lowerarm_r'            , 
+        'DEF-forearm.R.001'   : 'lowerarm_twist_01_r'   , 
         'DEF-hand.R'          : 'hand_r'                , 
-        'DEF-f_pinky.01.R.01' : 'pinky_01_r'            , 
+        'DEF-f_pinky.01.R'    : 'pinky_01_r'            , 
         'DEF-f_pinky.02.R'    : 'pinky_02_r'            , 
         'DEF-f_pinky.03.R'    : 'pinky_03_r'            , 
-        'DEF-f_ring.01.R.01'  : 'ring_01_r'             , 
+        'DEF-f_ring.01.R'     : 'ring_01_r'             , 
         'DEF-f_ring.02.R'     : 'ring_02_r'             , 
         'DEF-f_ring.03.R'     : 'ring_03_r'             , 
-        'DEF-f_middle.01.R.01': 'middle_01_r'           , 
+        'DEF-f_middle.01.R'   : 'middle_01_r'           , 
         'DEF-f_middle.02.R'   : 'middle_02_r'           , 
         'DEF-f_middle.03.R'   : 'middle_03_r'           , 
-        'DEF-f_index.01.R.01' : 'index_01_r'            , 
+        'DEF-f_index.01.R'    : 'index_01_r'            , 
         'DEF-f_index.02.R'    : 'index_02_r'            , 
         'DEF-f_index.03.R'    : 'index_03_r'            , 
-        'DEF-thumb.01.R.01'   : 'thumb_01_r'            , 
+        'DEF-thumb.01.R'      : 'thumb_01_r'            , 
         'DEF-thumb.02.R'      : 'thumb_02_r'            , 
         'DEF-thumb.03.R'      : 'thumb_03_r'            , 
-        'DEF-thigh.01.R'      : 'thigh_r'               ,
-        'DEF-thigh.02.R'      : 'thigh_twist_01_r'      , 
-        'DEF-shin.01.R'       : 'calf_r'                , 
-        'DEF-shin.02.R'       : 'calf_twist_01_r'       , 
+        'DEF-thigh.R'         : 'thigh_twist_01_r'      , 
+        'DEF-thigh.R.001'     : 'thigh_r'               ,
+        'DEF-shin.R'          : 'calf_r'                , 
+        'DEF-shin.R.001'      : 'calf_twist_01_r'       , 
         'DEF-foot.R'          : 'foot_r'                , 
         'DEF-toe.R'           : 'ball_r'                , 
-        }
-
-collapse_list = {
-        'DEF-palm.01.L' ,
-        'DEF-palm.02.L' ,
-        'DEF-palm.03.L' ,
-        'DEF-palm.04.L' ,
-
-        'DEF-palm.01.R' ,
-        'DEF-palm.02.R' ,
-        'DEF-palm.03.R' ,
-        'DEF-palm.04.R' ,
-
-        'DEF-thumb.01.L.02',
-        'DEF-f_index.01.L.02'  ,
-        'DEF-f_middle.01.L.02' ,
-        'DEF-f_ring.01.L.02'   ,
-        'DEF-f_pinky.01.L.02'  ,
-
-        'DEF-thumb.01.R.02',
-        'DEF-f_index.01.R.02'  ,
-        'DEF-f_middle.01.R.02' ,
-        'DEF-f_ring.01.R.02'   ,
-        'DEF-f_pinky.01.R.02'  
-
-        }
-
-extra_collapse_dict = {
-        'DEF-upper_arm.02.L' ,
-        'DEF-upper_arm.02.R' ,
-        'DEF-forearm.02.L',
-        'DEF-forearm.02.R', 
-
-        'DEF-thigh.02.L',
-        'DEF-thigh.02.R',
-        'DEF-shin.02.L',
-        'DEF-shin.02.R'
         }
 
 def merge_vg(obj, vg1_name, vg2_name):
@@ -426,11 +291,11 @@ def make_humanoid_constraint(context, rigify_object, export_rig_object):
     # Go to edit mode to edit parent
     bpy.ops.object.mode_set(mode='EDIT')
 
-    # Unparent all except spine_03
+    # Unparent all 
     for bone in temp_ob.data.edit_bones:
-        if bone.parent:
-            if bone.name != 'spine_03':
-                bone.parent = None
+        #if bone.parent:
+            #if bone.name != 'spine_03':
+        bone.parent = None
 
     bpy.ops.object.mode_set(mode='POSE')
 
@@ -441,7 +306,7 @@ def make_humanoid_constraint(context, rigify_object, export_rig_object):
     # Context copy
     context_copy = bpy.context.copy()
 
-    # Temp object use child of constrant to all it's bones to rigify deform bones
+    # Temp object use child of constraint to all it's bones to rigify deform bones
     for bone in temp_bones:
         temp_bones.active = bone
         pose_bone = temp_pose_bones[bone.name]
@@ -577,6 +442,13 @@ def extract_export_rig(context, rigify_object, scale):
     # Edit bones
     edit_bones = export_rig.edit_bones
     
+    # Rearrange parent
+    for bone in edit_bones:
+        if bone.parent and bone.parent.name.startswith('ORG-'):
+            parent_name = bone.parent.name.replace('ORG-', 'DEF-')
+            parent = edit_bones.get(parent_name)
+            bone.parent = parent
+
     # Delete other than deform bones
     for bone in edit_bones:
         #if 'DEF-' not in bone.name and bone.name != 'root':
@@ -602,27 +474,6 @@ def extract_export_rig(context, rigify_object, scale):
     for i, layer in enumerate(export_rig.layers):
         if i == 0: export_rig.layers[i] = True
         else: export_rig.layers[i] = False
-
-    # Divide chest bone
-    #chest_found = [bone for bone in edit_bones if bone.name == 'DEF-chest']
-    #if chest_found:
-    #    bpy.ops.armature.select_all(action='DESELECT')
-    #    bone = chest_found[0]
-    #    bone.select = True
-    #    bpy.ops.armature.subdivide()
-    #    edit_bones['DEF-chest'].name = 'DEF-chest.01'
-    #    edit_bones['DEF-chest.001'].name = 'DEF-chest.02'
-
-    # Set parent
-    for bone in edit_bones:
-        key = bone.name
-        while key in parent_dict:
-            value = parent_dict[key]
-            parent = edit_bones.get(value)
-            if parent:
-                bone.parent = parent
-                break
-            key = value
 
     # Go to pose mode
     bpy.ops.object.mode_set(mode='POSE')
@@ -727,7 +578,7 @@ def extract_export_meshes(context, source_data, export_rig_ob, scale):
 
     return export_objs
 
-def convert_to_unreal_humanoid(rig_object, mesh_objects = []):
+def convert_to_unreal_humanoid(rig_object, scale, mesh_objects = []):
 
     scene = bpy.context.scene
 
@@ -738,11 +589,14 @@ def convert_to_unreal_humanoid(rig_object, mesh_objects = []):
     source_arm = load_ue4_rig()
     source_obj = bpy.data.objects.new('source_rig', source_arm)
     scene.objects.link(source_obj)
+    source_obj.scale *= scale
     source_obj.show_x_ray = True
 
     # Get ue4 humanoid object matrices
     source_matrix = {}
     scene.objects.active = source_obj
+    source_obj.select = True
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     bpy.ops.object.mode_set(mode='EDIT')
     for eb in source_arm.edit_bones:
         source_matrix[eb.name] = eb.matrix
@@ -765,32 +619,74 @@ def convert_to_unreal_humanoid(rig_object, mesh_objects = []):
 
     edit_bones = rig_object.data.edit_bones
 
-    # Divide chest
-    chest_found = [bone for bone in edit_bones if bone.name == 'spine_02']
-    if chest_found:
-        bpy.ops.armature.select_all(action='DESELECT')
-        bone = chest_found[0]
-        bone.select = True
-        bpy.ops.armature.subdivide()
-        edit_bones['spine_02'].name = 'spine_02'
-        edit_bones['spine_02.001'].name = 'spine_03'
+    # Unconnect all the bones
+    for bone in edit_bones:
+        bone.use_connect = False
 
-    # Delete collapse bones
-    for bone_name in collapse_list:
-        bone = edit_bones.get(bone_name)
-        if bone:
-            edit_bones.remove(bone)
+    #    # Load ue4 humanoid matrix
+    #    if bone.name in source_matrix:
+
+    #        source_m = source_matrix[bone.name]
+    #        
+    #        # location of the bone
+    #        loc = bone.matrix.to_translation()
+
+    #        # UE4 Humanoid rig has standard upperarm close with the twist upperarm
+    #        if bone.name in {'upperarm_l', 'upperarm_r'}:
+
+    #            twist_name = bone.parent.name
+
+    #            # delta of the upperarm and twist upperarm in original ue4 humanoid
+    #            ori_loc = source_matrix[bone.name].to_translation()
+    #            ori_twist_name = source_matrix[twist_name].to_translation()
+    #            delta = ori_loc - ori_twist_name
+
+    #            twist_loc = edit_bones.get(twist_name).matrix.to_translation()
+    #            loc = twist_loc + delta
+
+    #        # Use ue4 humanoid rotation but keep the location
+    #        bone.matrix = Matrix([
+    #            (source_m[0][0], source_m[0][1], source_m[0][2], loc.x),
+    #            (source_m[1][0], source_m[1][1], source_m[1][2], loc.y),
+    #            (source_m[2][0], source_m[2][1], source_m[2][2], loc.z),
+    #            (0.0, 0.0, 0.0, 1.0),
+    #            ])
+
+    # Flip thigh and upperarm bones position with its twist
+    for bone in edit_bones:
+        if bone.name in {'thigh_l', 'thigh_r', 'upperarm_l', 'upperarm_r'}:
+            twist_bone = bone.parent
+            twist_pos = twist_bone.matrix.to_translation()
+            pos = bone.matrix.to_translation()
+
+            bone.matrix = Matrix([
+                (bone.matrix[0][0], bone.matrix[0][1], bone.matrix[0][2], twist_pos.x),
+                (bone.matrix[1][0], bone.matrix[1][1], bone.matrix[1][2], twist_pos.y),
+                (bone.matrix[2][0], bone.matrix[2][1], bone.matrix[2][2], twist_pos.z),
+                (0.0, 0.0, 0.0, 1.0),
+                ])
+
+            twist_bone.matrix = Matrix([
+                (twist_bone.matrix[0][0], twist_bone.matrix[0][1], twist_bone.matrix[0][2], pos.x),
+                (twist_bone.matrix[1][0], twist_bone.matrix[1][1], twist_bone.matrix[1][2], pos.y),
+                (twist_bone.matrix[2][0], twist_bone.matrix[2][1], twist_bone.matrix[2][2], pos.z),
+                (0.0, 0.0, 0.0, 1.0),
+                ])
 
     # Edit some parents
     for bone in edit_bones:
-        #if any([prefix for prefix in {'upperarm_', 'lowerarm_', 'thigh_', 'calf_'} if prefix in bone.name]):
-        if bone.name.startswith('upperarm_'):
+        if any([p for p in {'upperarm_', 'thigh_'} if bone.name.startswith(p)]):
             bone.parent = None
 
     edit_bones['upperarm_twist_01_l'].parent = edit_bones['upperarm_l']
     edit_bones['upperarm_twist_01_r'].parent = edit_bones['upperarm_r']
     edit_bones['upperarm_l'].parent = edit_bones['clavicle_l']
     edit_bones['upperarm_r'].parent = edit_bones['clavicle_r']
+
+    edit_bones['thigh_twist_01_l'].parent = edit_bones['thigh_l']
+    edit_bones['thigh_twist_01_r'].parent = edit_bones['thigh_r']
+    edit_bones['thigh_l'].parent = edit_bones['pelvis']
+    edit_bones['thigh_r'].parent = edit_bones['pelvis']
 
     edit_bones['lowerarm_l'].parent = edit_bones['upperarm_l']
     edit_bones['lowerarm_r'].parent = edit_bones['upperarm_r']
@@ -804,42 +700,7 @@ def convert_to_unreal_humanoid(rig_object, mesh_objects = []):
     edit_bones['foot_l'].parent = edit_bones['calf_l']
     edit_bones['foot_r'].parent = edit_bones['calf_r']
 
-    for bone in edit_bones:
-
-        # Unconnect all the bones
-        bone.use_connect = False
-
-        # Load ue4 humanoid matrix
-        if bone.name in source_matrix:
-
-            source_m = source_matrix[bone.name]
-            
-            # location of the bone
-            loc = bone.matrix.to_translation()
-
-            # UE4 Humanoid rig has standard upperarm close with the twist upperarm
-            if bone.name in {'upperarm_l', 'upperarm_r'}:
-
-                if bone.name == 'upperarm_l':
-                    suffix = '_l'
-                else: suffix = '_r'
-
-                # delta of the upperarm and twist upperarm in original ue4 humanoid
-                ori_loc = source_matrix['upperarm' +suffix].to_translation()
-                ori_twist_loc = source_matrix['upperarm_twist_01' + suffix].to_translation()
-                delta = ori_loc - ori_twist_loc
-
-                twist_loc = edit_bones.get('upperarm_twist_01' + suffix).matrix.to_translation()
-                loc = twist_loc + delta
-
-            # Use ue4 humanoid rotation but keep the location
-            bone.matrix = Matrix([
-                (source_m[0][0], source_m[0][1], source_m[0][2], loc.x),
-                (source_m[1][0], source_m[1][1], source_m[1][2], loc.y),
-                (source_m[2][0], source_m[2][1], source_m[2][2], loc.z),
-                (0.0, 0.0, 0.0, 1.0),
-                ])
-
+    # Back to object mode
     bpy.ops.object.mode_set(mode='OBJECT')
 
     # Delete ue4_rig
@@ -1001,7 +862,7 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
     global_scale = FloatProperty(
             name="Scale",
             min=0.001, max=1000.0,
-            default=100.0,
+            default=1.0,
             )
 
     #remove_unused_bones = BoolProperty(
@@ -1036,7 +897,7 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
     @classmethod
     def poll(cls, context):
         obj = context.object
-        return obj and obj.select and obj.type == 'ARMATURE'
+        return obj and obj.select and obj.type == 'ARMATURE' and obj.animation_data and obj.animation_data.action
 
     def draw(self, context):
         layout = self.layout
@@ -1046,6 +907,15 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
         layout.label(text="Timeframe of the action:")
         layout.prop(self, "timeframe", "")
         layout.prop(self, "hip_to_root")
+
+    def invoke(self, context, event):
+        action = context.object.animation_data.action
+        directory = os.path.dirname(context.blend_data.filepath)
+
+        self.filepath = os.path.join(directory, action.name + self.filename_ext)
+
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
 
     def execute(self, context):
         if not self.filepath:
@@ -1062,6 +932,9 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
         # Check action
         action = rig_obj.animation_data.action
 
+        # Scale of the objects
+        scale = ABS_SCALE * self.global_scale
+
         if not action:
             self.report({'ERROR'}, "FAILED! Please activate an action you want to export.")
             return{'CANCELLED'}
@@ -1076,12 +949,12 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
         #                mesh_objects.append(obj)
         #    else:
         #        mesh_objects = get_objects_using_rig(rig_obj)
-        #    export_rig_ob = extract_export_rig(context, rig_obj, self.global_scale, mesh_objects)
-        #else: export_rig_ob = extract_export_rig(context, rig_obj, self.global_scale)
-        export_rig_ob = extract_export_rig(context, rig_obj, self.global_scale)
+        #    export_rig_ob = extract_export_rig(context, rig_obj, scale, mesh_objects)
+        #else: export_rig_ob = extract_export_rig(context, rig_obj, scale)
+        export_rig_ob = extract_export_rig(context, rig_obj, scale)
 
         # Scale original rig
-        rig_obj.scale *= self.global_scale
+        rig_obj.scale *= scale
 
         # Set timeframe
         if self.timeframe != 'SCENE':
@@ -1100,7 +973,7 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
 
         else:
             # Retarget bone name
-            convert_to_unreal_humanoid(export_rig_ob)
+            convert_to_unreal_humanoid(export_rig_ob, scale)
 
             # Make humanoid constraint
             make_humanoid_constraint(context, rig_obj, export_rig_ob)
@@ -1110,10 +983,12 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
         export_rig_ob.select = True
         scene.objects.active = export_rig_ob
 
+        #return {'FINISHED'}
+
         # Set Global Matrix
         forward = '-Y'
         up = 'Z'
-        global_matrix = (Matrix.Scale(1.0, 4) * axis_conversion(to_forward=forward, to_up=up,).to_4x4()) 
+        global_matrix = (Matrix.Scale(1.0/ABS_SCALE, 4) * axis_conversion(to_forward=forward, to_up=up,).to_4x4()) 
 
         ## EXPORT!
         export_fbx_bin.save_single(self, scene, self.filepath,
@@ -1152,7 +1027,7 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
                 bpy.data.armatures.remove(arm, True)
 
         # Descale original rig
-        rig_obj.scale /= self.global_scale
+        rig_obj.scale /= scale
 
         # Load original state
         state.load(context)
@@ -1170,7 +1045,7 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
     global_scale = FloatProperty(
             name="Scale",
             min=0.001, max=1000.0,
-            default=100.0,
+            default=1.0,
             )
 
     #remove_unused_bones = BoolProperty(
@@ -1215,11 +1090,14 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
             self.report({'ERROR'}, source_data)
             return{'CANCELLED'}
 
+        # Scale of the objects
+        scale = ABS_SCALE * self.global_scale
+
         # Get export rig
         #if self.remove_unused_bones:
-        #    export_rig_ob = extract_export_rig(context, source_data.rigify_object, self.global_scale, source_data.mesh_objects)
-        #else: export_rig_ob = extract_export_rig(context, source_data.rigify_object, self.global_scale)
-        export_rig_ob = extract_export_rig(context, source_data.rigify_object, self.global_scale)
+        #    export_rig_ob = extract_export_rig(context, source_data.rigify_object, scale, source_data.mesh_objects)
+        #else: export_rig_ob = extract_export_rig(context, source_data.rigify_object, scale)
+        export_rig_ob = extract_export_rig(context, source_data.rigify_object, scale)
 
         # If returns string it means error
         if type(export_rig_ob) is str:
@@ -1228,7 +1106,7 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
             return{'CANCELLED'}
 
         # Get export mesh objects
-        export_mesh_objs = extract_export_meshes(context, source_data, export_rig_ob, self.global_scale)
+        export_mesh_objs = extract_export_meshes(context, source_data, export_rig_ob, scale)
 
         # Set to object mode
         if context.mode != 'OBJECT':
@@ -1241,12 +1119,16 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
 
         # Retarget bone name and vertex groups
         if self.use_humanoid_name:
-            convert_to_unreal_humanoid(export_rig_ob, export_mesh_objs)
+            convert_to_unreal_humanoid(export_rig_ob, scale, export_mesh_objs)
+
+        #return {'FINISHED'}
 
         # Set Global Matrix
         forward = '-Y'
         up = 'Z'
-        global_matrix = (Matrix.Scale(1.0, 4) * axis_conversion(to_forward=forward, to_up=up,).to_4x4()) 
+        #global_matrix = (Matrix.Scale(1.0, 4) * axis_conversion(to_forward=forward, to_up=up,).to_4x4()) 
+        # Descale global matrix because Unreal always multiply object by 100 points when importing
+        global_matrix = (Matrix.Scale(1.0/ABS_SCALE, 4) * axis_conversion(to_forward=forward, to_up=up,).to_4x4()) 
 
         # EXPORT!
         export_fbx_bin.save_single(self, context.scene, self.filepath,
