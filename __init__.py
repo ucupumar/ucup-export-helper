@@ -1069,7 +1069,7 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
         #layout.prop(self, "remove_unused_bones")
         #layout.prop(self, "use_humanoid_name")
         #layout.prop(self, "unparent_ik_bones")
-        #layout.label(text="Timeframe of the action:")
+        layout.label(text="Timeframe of the action:")
         layout.prop(props, "timeframe", "")
         #layout.prop(props, "hip_to_root")
 
