@@ -16,7 +16,7 @@ if "bpy" in locals():
 
 import bpy, math, os
 from mathutils import Vector, Matrix
-from bpy.props import FloatProperty, BoolProperty, IntProperty, EnumProperty, StringProperty
+from bpy.props import *
 from io_scene_fbx import export_fbx_bin
 from bpy_extras.io_utils import (ExportHelper,
                                  #orientation_helper_factory,
@@ -129,6 +129,20 @@ def load_ue4_hero_tpp():
 
     return rig_obj, mesh_obj
 
+def get_current_armature_object():
+    obj = bpy.context.object
+    if not obj: return None
+
+    if obj.type == 'ARMATURE':
+        return obj
+
+    arm_obj = None
+    for mod in obj.modifiers:
+        if mod.type == 'ARMATURE' and mod.object:
+            arm_obj = mod.object
+            break
+    return arm_obj
+
 class SourceData():
     rigify_object = None
     mesh_objects = []
@@ -153,21 +167,22 @@ class SaveState():
         scene.frame_start = self.frame_start
         scene.frame_end = self.frame_end
 
-retarget_dict = {
+#retarget_dict = {
+std_retarget_dict = {
         'root'                : 'Root'                  , 
-        'DEF-spine'           : 'pelvis'                , 
-        'DEF-spine.001'       : 'spine_01'              , 
-        'DEF-spine.002'       : 'spine_02'              , 
-        'DEF-spine.003'       : 'spine_03'              , 
-        'DEF-spine.004'       : 'neck_01'               , 
-        'DEF-spine.005'       : 'head'                  , 
+        #'DEF-spine'           : 'pelvis'                , 
+        #'DEF-spine.001'       : 'spine_01'              , 
+        #'DEF-spine.002'       : 'spine_02'              , 
+        #'DEF-spine.003'       : 'spine_03'              , 
+        #'DEF-spine.004'       : 'neck_01'               , 
+        #'DEF-spine.005'       : 'head'                  , 
 
         # LEFT                                           
         'DEF-shoulder.L'      : 'clavicle_l'            , 
-        'DEF-upper_arm.L'     : 'upperarm_twist_01_l'   ,
-        'DEF-upper_arm.L.001' : 'upperarm_l'            , 
-        'DEF-forearm.L'       : 'lowerarm_l'            , 
-        'DEF-forearm.L.001'   : 'lowerarm_twist_01_l'   , 
+        #'DEF-upper_arm.L'     : 'upperarm_twist_01_l'   ,
+        #'DEF-upper_arm.L.001' : 'upperarm_l'            , 
+        #'DEF-forearm.L'       : 'lowerarm_l'            , 
+        #'DEF-forearm.L.001'   : 'lowerarm_twist_01_l'   , 
         'DEF-hand.L'          : 'hand_l'                , 
         'DEF-f_pinky.01.L'    : 'pinky_01_l'            , 
         'DEF-f_pinky.02.L'    : 'pinky_02_l'            , 
@@ -184,19 +199,19 @@ retarget_dict = {
         'DEF-thumb.01.L'      : 'thumb_01_l'            , 
         'DEF-thumb.02.L'      : 'thumb_02_l'            , 
         'DEF-thumb.03.L'      : 'thumb_03_l'            , 
-        'DEF-thigh.L'         : 'thigh_twist_01_l'      , 
-        'DEF-thigh.L.001'     : 'thigh_l'               ,
-        'DEF-shin.L'          : 'calf_l'                , 
-        'DEF-shin.L.001'      : 'calf_twist_01_l'       , 
+        #'DEF-thigh.L'         : 'thigh_twist_01_l'      , 
+        #'DEF-thigh.L.001'     : 'thigh_l'               ,
+        #'DEF-shin.L'          : 'calf_l'                , 
+        #'DEF-shin.L.001'      : 'calf_twist_01_l'       , 
         'DEF-foot.L'          : 'foot_l'                , 
         'DEF-toe.L'           : 'ball_l'                , 
         
         # RIGHT                                          
         'DEF-shoulder.R'      : 'clavicle_r'            , 
-        'DEF-upper_arm.R'     : 'upperarm_twist_01_r'   ,
-        'DEF-upper_arm.R.001' : 'upperarm_r'            , 
-        'DEF-forearm.R'       : 'lowerarm_r'            , 
-        'DEF-forearm.R.001'   : 'lowerarm_twist_01_r'   , 
+        #'DEF-upper_arm.R'     : 'upperarm_twist_01_r'   ,
+        #'DEF-upper_arm.R.001' : 'upperarm_r'            , 
+        #'DEF-forearm.R'       : 'lowerarm_r'            , 
+        #'DEF-forearm.R.001'   : 'lowerarm_twist_01_r'   , 
         'DEF-hand.R'          : 'hand_r'                , 
         'DEF-f_pinky.01.R'    : 'pinky_01_r'            , 
         'DEF-f_pinky.02.R'    : 'pinky_02_r'            , 
@@ -213,13 +228,125 @@ retarget_dict = {
         'DEF-thumb.01.R'      : 'thumb_01_r'            , 
         'DEF-thumb.02.R'      : 'thumb_02_r'            , 
         'DEF-thumb.03.R'      : 'thumb_03_r'            , 
-        'DEF-thigh.R'         : 'thigh_twist_01_r'      , 
-        'DEF-thigh.R.001'     : 'thigh_r'               ,
-        'DEF-shin.R'          : 'calf_r'                , 
-        'DEF-shin.R.001'      : 'calf_twist_01_r'       , 
+        #'DEF-thigh.R'         : 'thigh_twist_01_r'      , 
+        #'DEF-thigh.R.001'     : 'thigh_r'               ,
+        #'DEF-shin.R'          : 'calf_r'                , 
+        #'DEF-shin.R.001'      : 'calf_twist_01_r'       , 
         'DEF-foot.R'          : 'foot_r'                , 
         'DEF-toe.R'           : 'ball_r'                , 
         }
+
+suffix_dict = {
+        '.L' : '_l',
+        '.R' : '_r',
+        }
+
+def get_retarget_dict(rigify_object):
+    retarget_dict = std_retarget_dict.copy()
+    # Check number of spines first
+    bones = rigify_object.data.bones
+
+    # Get limb bones
+    limb_names = ['DEF-upper_arm.L', 'DEF-upper_arm.R',
+                  'DEF-forearm.L', 'DEF-forearm.R',
+                  'DEF-thigh.L', 'DEF-thigh.R',
+                  'DEF-shin.L', 'DEF-shin.R',
+                  ]
+    limbs = {}
+    for bone in bones:
+        if bone.name in limb_names:
+            # Search for its childs
+            limbs[bone.name] = [bone]
+            cur_bone = bone
+            while True:
+                child_bone = [b for b in bones if b.parent == cur_bone and bone.name in b.name]
+                if child_bone:
+                    limbs[bone.name].append(child_bone[0])
+                    cur_bone = child_bone[0]
+                else:
+                    break
+
+    limb_prefixes = {
+            'DEF-upper_arm' : 'upperarm',
+            'DEF-forearm'   : 'lowerarm',
+            'DEF-thigh'     : 'thigh',
+            'DEF-shin'      : 'calf',
+            }
+
+    # Add limb bones to dictionary
+    for parent_name, limb_bones in limbs.items():
+
+        prefix = [[b, a] for b, a in limb_prefixes.items() if b in parent_name]
+        if not prefix: continue
+
+        prefix_before = prefix[0][0]
+        prefix_after = prefix[0][1]
+        suffix_before = parent_name[-2:]
+        suffix_after = suffix_dict[suffix_before]
+
+        # Upperarm and thigh has inversed bones
+        if prefix_before in {'DEF-upper_arm', 'DEF-thigh'}:
+            iterator = reversed(limb_bones)
+        else: iterator = limb_bones
+
+        for i, bone in enumerate(iterator):
+            if i == 0:
+                retarget_dict[bone.name] = prefix_after + suffix_after
+            else:
+                retarget_dict[bone.name] = prefix_after + '_twist_' + str(i).zfill(2) + suffix_after
+
+    # Get all the spines sorted
+    spines = []
+    super_spine = bones.get('DEF-spine')
+    if super_spine:
+        spines.append(super_spine)
+        cur_spine = super_spine
+        while True:
+            bone = [bone for bone in bones if bone.name.startswith('DEF-spine.') and bone.parent == cur_spine]
+            if bone:
+                bone = bone[0]
+                spines.append(bone)
+                cur_spine = bone
+            else:
+                break
+
+    # Get the last spine
+    last_spine = None
+    mch_neck = bones.get('MCH-ROT-neck')
+    if mch_neck:
+        last_spine_name = mch_neck.parent.name.replace('MCH-', 'DEF-')
+        last_spine = bones.get(last_spine_name)
+
+    # Add spine dictionary
+    last_idx = len(spines)-1
+    last_spine_found = False
+    last_spine_idx = 0
+    for i, spine in enumerate(spines):
+        # First bone is pelvis
+        if i == 0:
+            retarget_dict[spine.name] = 'pelvis'
+            continue
+
+        # Last index is head
+        if i == last_idx:
+            retarget_dict[spine.name] = 'head'
+            continue
+
+        # Spine bones before the last one found
+        if i >= 1 and not last_spine_found:
+            retarget_dict[spine.name] = 'spine_' + str(i).zfill(2)
+            if spine == last_spine:
+                last_spine_found = True
+                last_spine_idx = i
+                continue
+
+        # Neck bones are after last spine
+        if last_spine_found:
+            retarget_dict[spine.name] = 'neck_' + str(i-last_spine_idx).zfill(2)
+
+    #print(retarget_dict)
+
+    return retarget_dict
 
 def merge_vg(obj, vg1_name, vg2_name):
     vg1_index = -1
@@ -305,6 +432,9 @@ def make_humanoid_constraint(context, rigify_object, export_rig_object):
 
     # Context copy
     context_copy = bpy.context.copy()
+
+    # Get retarget dictionary
+    retarget_dict = get_retarget_dict(rigify_object)
 
     # Temp object use child of constraint to all it's bones to rigify deform bones
     for bone in temp_bones:
@@ -431,7 +561,7 @@ def extract_export_rig(context, rigify_object, scale):
     # Show x-ray for debugging
     export_rig_ob.show_x_ray = True
 
-    # Deselect all and select the rig
+    # Deselect all and select the export rig
     bpy.ops.object.select_all(action='DESELECT')
     scene.objects.active = export_rig_ob
     export_rig_ob.select = True
@@ -442,7 +572,7 @@ def extract_export_rig(context, rigify_object, scale):
     # Edit bones
     edit_bones = export_rig.edit_bones
     
-    # Rearrange parent
+    # Rearrange parent (RIGIFY ONLY)
     for bone in edit_bones:
         if bone.parent and bone.parent.name.startswith('ORG-'):
             parent_name = bone.parent.name.replace('ORG-', 'DEF-')
@@ -489,7 +619,7 @@ def extract_export_rig(context, rigify_object, scale):
     #    print(driver.data_path)
     export_rig_ob.animation_data_clear()
 
-    # Remove rig_id used by rigify rig_ui.py
+    # Remove rig_id used by rigify rig_ui.py (RIGIFY ONLY)
     bpy.ops.wm.properties_remove(data_path = 'active_object.data', property = 'rig_id')
 
     # Clear locking bones
@@ -511,16 +641,16 @@ def extract_export_rig(context, rigify_object, scale):
     # BEGIN: EVALUATE VALID RIGIFY
 
     # There can be only one root, check them for validity
-    roots = []
-    for bone in export_rig.bones:
-        if not bone.parent:
-            roots.append(bone)
+    #roots = []
+    #for bone in export_rig.bones:
+    #    if not bone.parent:
+    #        roots.append(bone)
 
-    # If not found a bone or have many roots, it's counted as not valid
-    if len(export_rig.bones) == 0 or len(roots) > 1:
-        #bpy.ops.object.mode_set(mode='OBJECT')
-        #bpy.ops.object.delete()
-        return "FAILED! The rig is not a valid rigify!"
+    ## If not found a bone or have many roots, it's counted as not valid
+    #if len(export_rig.bones) == 0 or len(roots) > 1:
+    #    #bpy.ops.object.mode_set(mode='OBJECT')
+    #    #bpy.ops.object.delete()
+    #    return "FAILED! The rig is not a valid rigify!"
 
     # END: EVALUATE VALID RIGIFY
 
@@ -578,7 +708,7 @@ def extract_export_meshes(context, source_data, export_rig_ob, scale):
 
     return export_objs
 
-def convert_to_unreal_humanoid(rig_object, scale, mesh_objects = []):
+def convert_to_unreal_humanoid(rigify_obj, export_rig_obj, scale, mesh_objects = []):
 
     scene = bpy.context.scene
 
@@ -602,8 +732,11 @@ def convert_to_unreal_humanoid(rig_object, scale, mesh_objects = []):
         source_matrix[eb.name] = eb.matrix
     bpy.ops.object.mode_set(mode='OBJECT')
 
+    # Get retarget dictionary
+    retarget_dict = get_retarget_dict(rigify_obj)
+
     # Rename bones
-    for bone in rig_object.data.bones:
+    for bone in export_rig_obj.data.bones:
         new_name = retarget_dict.get(bone.name)
         if new_name:
             bone.name = new_name
@@ -614,14 +747,77 @@ def convert_to_unreal_humanoid(rig_object, scale, mesh_objects = []):
             if vg.name in retarget_dict:
                 vg.name = retarget_dict[vg.name]
 
-    scene.objects.active = rig_object
+    scene.objects.active = export_rig_obj
     bpy.ops.object.mode_set(mode='EDIT')
 
-    edit_bones = rig_object.data.edit_bones
+    edit_bones = export_rig_obj.data.edit_bones
 
     # Unconnect all the bones
     for bone in edit_bones:
         bone.use_connect = False
+
+    # Reverse limb bones
+    master_lib_names = ['upperarm_l', 'upperarm_r', 'thigh_l', 'thigh_r']
+    limb_chains = {}
+    for name in master_lib_names:
+        master_bone = edit_bones.get(name)
+        if not master_bone: continue
+
+        suffix = name[-2:]
+        prefix = name[:-2]
+
+        limb_chains[name] = [master_bone]
+        cur_bone = master_bone
+        while True:
+            bone = cur_bone.parent
+            if bone.name.startswith(prefix):
+                limb_chains[name].append(bone)
+                cur_bone = bone
+            else:
+                break
+
+    # Reverse things
+    for master_name, limb_bones in limb_chains.items():
+        if not limb_bones: continue
+
+        last_idx = len(limb_bones)-1
+        last_parent = limb_bones[last_idx].parent
+
+        matrices = []
+
+        # Reverse parent
+        for i, bone in enumerate(limb_bones):
+            matrices.append(bone.matrix.copy())
+            if i == 0:
+                bone.parent = last_parent
+            else: bone.parent = limb_bones[i-1]
+
+        # Reverse matrix
+        for i, matrix in enumerate(reversed(matrices)):
+            ori_matrix = limb_bones[i].matrix
+            new_loc = matrix.to_translation()
+            limb_bones[i].matrix = Matrix([
+                (ori_matrix[0][0], ori_matrix[0][1], ori_matrix[0][2], new_loc.x),
+                (ori_matrix[1][0], ori_matrix[1][1], ori_matrix[1][2], new_loc.y),
+                (ori_matrix[2][0], ori_matrix[2][1], ori_matrix[2][2], new_loc.z),
+                (0.0, 0.0, 0.0, 1.0),
+                ])
+
+    reparent_dict = {
+            'hand_l' : 'lowerarm_l',
+            'hand_r' : 'lowerarm_r',
+            'foot_l' : 'calf_l',
+            'foot_r' : 'calf_r',
+            'thumb_01_l' : 'hand_l',
+            'thumb_01_r' : 'hand_r',
+            }
+
+    # Reparent Forward limb bones
+    for child_name, parent_name in reparent_dict.items():
+        child = edit_bones.get(child_name)
+        parent = edit_bones.get(parent_name)
+        if child and parent:
+            child.parent = parent
 
     #    # Load ue4 humanoid matrix
     #    if bone.name in source_matrix:
@@ -652,59 +848,53 @@ def convert_to_unreal_humanoid(rig_object, scale, mesh_objects = []):
     #            (0.0, 0.0, 0.0, 1.0),
     #            ])
 
-    # Flip thigh and upperarm bones position with its twist
-    for bone in edit_bones:
-        if bone.name in {'thigh_l', 'thigh_r', 'upperarm_l', 'upperarm_r'}:
-            twist_bone = bone.parent
-            twist_pos = twist_bone.matrix.to_translation()
-            pos = bone.matrix.to_translation()
-
-            bone.matrix = Matrix([
-                (bone.matrix[0][0], bone.matrix[0][1], bone.matrix[0][2], twist_pos.x),
-                (bone.matrix[1][0], bone.matrix[1][1], bone.matrix[1][2], twist_pos.y),
-                (bone.matrix[2][0], bone.matrix[2][1], bone.matrix[2][2], twist_pos.z),
-                (0.0, 0.0, 0.0, 1.0),
-                ])
-
-            twist_bone.matrix = Matrix([
-                (twist_bone.matrix[0][0], twist_bone.matrix[0][1], twist_bone.matrix[0][2], pos.x),
-                (twist_bone.matrix[1][0], twist_bone.matrix[1][1], twist_bone.matrix[1][2], pos.y),
-                (twist_bone.matrix[2][0], twist_bone.matrix[2][1], twist_bone.matrix[2][2], pos.z),
-                (0.0, 0.0, 0.0, 1.0),
-                ])
-
-    # Edit some parents
-    for bone in edit_bones:
-        if any([p for p in {'upperarm_', 'thigh_'} if bone.name.startswith(p)]):
-            bone.parent = None
-
-    edit_bones['upperarm_twist_01_l'].parent = edit_bones['upperarm_l']
-    edit_bones['upperarm_twist_01_r'].parent = edit_bones['upperarm_r']
-    edit_bones['upperarm_l'].parent = edit_bones['clavicle_l']
-    edit_bones['upperarm_r'].parent = edit_bones['clavicle_r']
-
-    edit_bones['thigh_twist_01_l'].parent = edit_bones['thigh_l']
-    edit_bones['thigh_twist_01_r'].parent = edit_bones['thigh_r']
-    edit_bones['thigh_l'].parent = edit_bones['pelvis']
-    edit_bones['thigh_r'].parent = edit_bones['pelvis']
-
-    edit_bones['lowerarm_l'].parent = edit_bones['upperarm_l']
-    edit_bones['lowerarm_r'].parent = edit_bones['upperarm_r']
-
-    edit_bones['hand_l'].parent = edit_bones['lowerarm_l']
-    edit_bones['hand_r'].parent = edit_bones['lowerarm_r']
-
-    edit_bones['calf_l'].parent = edit_bones['thigh_l']
-    edit_bones['calf_r'].parent = edit_bones['thigh_r']
-
-    edit_bones['foot_l'].parent = edit_bones['calf_l']
-    edit_bones['foot_r'].parent = edit_bones['calf_r']
-
     # Back to object mode
     bpy.ops.object.mode_set(mode='OBJECT')
 
     # Delete ue4_rig
     bpy.data.armatures.remove(source_arm, True)
+
+# Fuction for Unparent ik related bones (currrently for rigify only)
+def unparent_ik_related_bones(use_humanoid_name, rigify_obj, export_rig_obj):
+    scene = bpy.context.scene
+
+    # Search for ik related bones
+    unparent_bone_names = []
+    for bone in rigify_obj.data.bones:
+        # Logically if bone marked with fk suffix should have its ik counterpart bone
+        if ((bone.name.endswith('_fk.L') or bone.name.endswith('_fk.R')) 
+            # MCH bone is not count
+            and not bone.name.startswith('MCH-') 
+            # Root ik bone also doesn't count, indicated by 'parent' suffix in its parent bone
+            and not (bone.parent.name.endswith('_parent.L') or (bone.parent.name.endswith('_parent.R'))) 
+            ):
+            bone_name = 'DEF-' + bone.name.replace('_fk', '')
+            unparent_bone_names.append(bone_name)
+
+    # Set to object mode
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    scene.objects.active = export_rig_obj
+
+    # Set to edit mode
+    bpy.ops.object.mode_set(mode='EDIT')
+
+    edit_bones = export_rig_obj.data.edit_bones
+
+    # Get retarget dictionary
+    retarget_dict = get_retarget_dict(rigify_obj)
+
+    for bone in edit_bones:
+        if use_humanoid_name:
+            for key, value in retarget_dict.items():
+                if value == bone.name and key in unparent_bone_names:
+                    bone.parent = None
+                    break
+        elif bone.name in unparent_bone_names:
+            bone.parent = None
+
+    # Back to object mode
+    bpy.ops.object.mode_set(mode='OBJECT')
 
 def evaluate_and_get_source_data(objects):
 
@@ -781,6 +971,12 @@ def evaluate_and_get_source_data(objects):
         return "FAILED! No objects valid to export! Make sure your armature modifiers are properly set."
 
     return source_data
+
+# Check if using rigify by checking existance of MCH-WGT-hips
+def check_use_rigify(rig):
+    root_bone = rig.bones.get('MCH-WGT-hips')
+    if not root_bone: return False
+    return True
 
 def move_root(scene, obj):
 
@@ -859,41 +1055,6 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
     filename_ext = ".fbx"
     filter_glob = StringProperty(default="*.fbx", options={'HIDDEN'})
 
-    global_scale = FloatProperty(
-            name="Scale",
-            min=0.001, max=1000.0,
-            default=1.0,
-            )
-
-    #remove_unused_bones = BoolProperty(
-    #        name="Remove unused bones",
-    #        description="Remove unused bones based from meshes usage", 
-    #        default=True,
-    #        )
-
-    use_humanoid_name = BoolProperty(
-            name="Use Unreal humanoid bone name",
-            description="Use standard unreal humanoid bone name for easy retargeting", 
-            default=True,
-            )
-
-    timeframe = EnumProperty(
-            name = "Timeframe of the action",
-            description="Option to select meshes to export", 
-            items=(
-                ('SCENE', "Scene timeframe", ""),
-                ('ACTION', "Action length", ""),
-                ('ACTION_MINUS_ONE', "Action length - 1 frame (loop animation)", ""),
-                ), 
-            default='ACTION',
-            )
-
-    hip_to_root = BoolProperty(
-            name="Convert Hip XY location to Root location",
-            description="Useful if you want to use root motion on UE4", 
-            default=False,
-            )
-
     @classmethod
     def poll(cls, context):
         obj = context.object
@@ -901,12 +1062,16 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
 
     def draw(self, context):
         layout = self.layout
-        layout.prop(self, "global_scale")
+        rig_obj = get_current_armature_object()
+        action = rig_obj.animation_data.action
+        props = action.ue4h_props
+        #layout.prop(self, "global_scale")
         #layout.prop(self, "remove_unused_bones")
-        layout.prop(self, "use_humanoid_name")
-        layout.label(text="Timeframe of the action:")
-        layout.prop(self, "timeframe", "")
-        layout.prop(self, "hip_to_root")
+        #layout.prop(self, "use_humanoid_name")
+        #layout.prop(self, "unparent_ik_bones")
+        #layout.label(text="Timeframe of the action:")
+        layout.prop(props, "timeframe", "")
+        #layout.prop(props, "hip_to_root")
 
     def invoke(self, context, event):
         action = context.object.animation_data.action
@@ -928,55 +1093,56 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
 
         # Active object is source rigify object
         rig_obj = context.object
+        rig_props = rig_obj.data.ue4h_props
+
+        # Check if using rigify by checking the widget of root bone
+        use_rigify = check_use_rigify(rig_obj.data)
+        if not use_rigify:
+            state.load(context)
+            self.report({'ERROR'}, 'This addon only works with Blender 2.78 Rigify! (More support coming soon!)')
+            return{'CANCELLED'}
 
         # Check action
         action = rig_obj.animation_data.action
+        action_props = action.ue4h_props
 
         # Scale of the objects
-        scale = ABS_SCALE * self.global_scale
+        scale = ABS_SCALE * rig_props.global_scale
 
         if not action:
             self.report({'ERROR'}, "FAILED! Please activate an action you want to export.")
             return{'CANCELLED'}
 
         # Extract export rig from rigify
-        #if self.remove_unused_bones:
-        #    # If using linked lib
-        #    mesh_objects = []
-        #    if rig_obj.proxy_group:
-        #        for obj in rig_obj.proxy_group.dupli_group.objects:
-        #            if obj.type == 'MESH':
-        #                mesh_objects.append(obj)
-        #    else:
-        #        mesh_objects = get_objects_using_rig(rig_obj)
-        #    export_rig_ob = extract_export_rig(context, rig_obj, scale, mesh_objects)
-        #else: export_rig_ob = extract_export_rig(context, rig_obj, scale)
         export_rig_ob = extract_export_rig(context, rig_obj, scale)
 
         # Scale original rig
         rig_obj.scale *= scale
 
         # Set timeframe
-        if self.timeframe != 'SCENE':
+        if action_props.timeframe != 'SCENE':
             scene.frame_start = action.frame_range[0]
             scene.frame_end = action.frame_range[1]
-            if self.timeframe == 'ACTION_MINUS_ONE':
+            if action_props.timeframe == 'ACTION_MINUS_ONE':
                 scene.frame_end -= 1
 
-        if not self.use_humanoid_name:
+        if not rig_props.use_humanoid_name:
             # Make constraint
             make_constraint(context, rig_obj, export_rig_ob)
 
             # Manual bake action if want to edit root bone
-            #if self.hip_to_root:
+            #if action_props.hip_to_root:
             #    move_root(scene, export_rig_ob)
 
         else:
             # Retarget bone name
-            convert_to_unreal_humanoid(export_rig_ob, scale)
+            convert_to_unreal_humanoid(rig_obj, export_rig_ob, scale)
 
             # Make humanoid constraint
             make_humanoid_constraint(context, rig_obj, export_rig_ob)
+
+        if rig_props.unparent_ik_bones:
+            unparent_ik_related_bones(rig_props.use_humanoid_name, rig_obj, export_rig_ob)
 
         # Select only export rig
         bpy.ops.object.select_all(action='DESELECT')
@@ -1036,43 +1202,31 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
 
 class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
     bl_idname = "export_mesh.rigify_fbx"
-    bl_label = "Export Rigify mesh"
+    bl_label = "Export UE4 Skeletal mesh"
     bl_description = "Export rigify mesh as skeletal mesh FBX file"
     bl_options = {'REGISTER', 'UNDO'}
     filename_ext = ".fbx"
     filter_glob = StringProperty(default="*.fbx", options={'HIDDEN'})
 
-    global_scale = FloatProperty(
-            name="Scale",
-            min=0.001, max=1000.0,
-            default=1.0,
-            )
-
-    #remove_unused_bones = BoolProperty(
-    #        name="Remove unused bones",
-    #        description="Remove unused bones based from meshes usage", 
-    #        default=True,
-    #        )
-
-    use_humanoid_name = BoolProperty(
-            name="Use Unreal humanoid bone name",
-            description="Use standard unreal humanoid bone name for easy retargeting", 
-            default=True,
-            )
-
     @classmethod
     def poll(cls, context):
-        objs = [obj for obj in context.selected_objects if (
-            obj.proxy == None and # You can't export if object is linked
-            (obj.type == 'MESH' or obj.type == 'ARMATURE') # Only mesh or armature can be exported
-            )]
-        return any(objs)
+        #objs = [obj for obj in context.selected_objects if (
+        #    obj.proxy == None and # You can't export if object is linked
+        #    (obj.type == 'MESH' or obj.type == 'ARMATURE') # Only mesh or armature can be exported
+        #    )]
+        #return any(objs)
+        return get_current_armature_object()
 
     def draw(self, context):
         layout = self.layout
-        layout.prop(self, "global_scale")
+        rig_obj = get_current_armature_object()
+        props = rig_obj.data.ue4h_props
+        #layout.label('No specific options yet!')
+        #layout.prop(self, "global_scale")
         #layout.prop(self, "remove_unused_bones")
-        layout.prop(self, "use_humanoid_name")
+        #layout.prop(self, "use_humanoid_name")
+        layout.prop(props, "global_scale")
+        layout.prop(props, "use_humanoid_name")
 
     def execute(self, context):
         if not self.filepath:
@@ -1091,7 +1245,15 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
             return{'CANCELLED'}
 
         # Scale of the objects
-        scale = ABS_SCALE * self.global_scale
+        rig_props = source_data.rigify_object.data.ue4h_props
+        scale = ABS_SCALE * rig_props.global_scale
+
+        # Check if using rigify by checking the widget of root bone
+        use_rigify = check_use_rigify(source_data.rigify_object.data)
+        if not use_rigify:
+            state.load(context)
+            self.report({'ERROR'}, 'This addon only works with Blender 2.78 Rigify! (More support coming soon!)')
+            return{'CANCELLED'}
 
         # Get export rig
         #if self.remove_unused_bones:
@@ -1100,10 +1262,10 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
         export_rig_ob = extract_export_rig(context, source_data.rigify_object, scale)
 
         # If returns string it means error
-        if type(export_rig_ob) is str:
-            state.load(context)
-            self.report({'ERROR'}, export_rig_ob)
-            return{'CANCELLED'}
+        #if type(export_rig_ob) is str:
+        #    state.load(context)
+        #    self.report({'ERROR'}, export_rig_ob)
+        #    return{'CANCELLED'}
 
         # Get export mesh objects
         export_mesh_objs = extract_export_meshes(context, source_data, export_rig_ob, scale)
@@ -1117,9 +1279,12 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
         for obj in export_mesh_objs:
             obj.select = True
 
-        # Retarget bone name and vertex groups
-        if self.use_humanoid_name:
-            convert_to_unreal_humanoid(export_rig_ob, scale, export_mesh_objs)
+        # Retarget bone name and vertex groups (RIGIFY ONLY)
+        if rig_props.use_humanoid_name:
+            convert_to_unreal_humanoid(source_data.rigify_object, export_rig_ob, scale, export_mesh_objs)
+
+        if rig_props.unparent_ik_bones:
+            unparent_ik_related_bones(rig_props.use_humanoid_name, source_data.rigify_object, export_rig_ob)
 
         #return {'FINISHED'}
 
@@ -1174,7 +1339,7 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
             
             self.report({'INFO'}, "INFO: Cannot export mesh [" + obj_names + "] because of reasons")
 
-        self.report({'INFO'}, "INFO: What does the fox say?")
+        #self.report({'INFO'}, "INFO: Export successful!")
 
         return {'FINISHED'}
 
@@ -1305,30 +1470,170 @@ class AddHeroTPP(bpy.types.Operator):
         mesh_obj.select = False
         return {'FINISHED'}
 
-class UE4HelperPanel(bpy.types.Panel):
+class ToggleUE4HelperOptions(bpy.types.Operator):
+    bl_idname = "scene.toggle_ue4_helper_options"
+    bl_label = "Toggle UE4 Helper Options"
+    bl_description = "Toggle UE4 Helper Options"
+    #bl_options = {'REGISTER', 'UNDO'}
+
+    prop = StringProperty(default='show_rig_export_options')
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        props = context.scene.ue4h_props
+
+        if self.prop not in dir(props) or not self.prop.startswith('show_'):
+            return {'CANCELLED'}
+
+        cur_value = getattr(props, self.prop)
+        setattr(props, self.prop, not cur_value)
+
+        return {'FINISHED'}
+
+class UE4HelperSkeletalPanel(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
     #bl_context = "objectmode"
-    bl_label = "UE4 Export Helper"
+    bl_label = "UE4 Skeletal"
     bl_category = "UE4 Helper"
 
     def draw(self, context):
         scene = context.scene
+        obj = context.object
+        scene_props = context.scene.ue4h_props
 
-        c = self.layout.column()
-        c.label(text="Export mesh:")
-        c.operator("export_mesh.rigify_fbx")
-        c.label(text="Export animation:")
-        c.operator("export_anim.rigify_fbx")
-        c.label(text="Rigify stuff:")
-        c.operator("object.add_standard_ue4_tpp")
-        #c.operator("armature.rotate_bones_to_unreal_like")
+        # Search for armature
+        rig_obj = get_current_armature_object()
+        use_rigify = check_use_rigify(rig_obj.data)
+
+        c = self.layout.column(align=True)
+        r = c.row(align=True)
+        r.operator('export_mesh.rigify_fbx', text='Export Skeletal Mesh', icon='MOD_ARMATURE')
+        if scene_props.show_rig_export_options: r.alert = True
+        r.operator('scene.toggle_ue4_helper_options', text='', icon='SCRIPTWIN').prop = 'show_rig_export_options'
+
+        if scene_props.show_rig_export_options:
+            box = c.box()
+            if not rig_obj:
+                box.label("No rig selected!", icon="ARMATURE_DATA")
+            else:
+                props = rig_obj.data.ue4h_props
+                col = box.column(align=True)
+                #boxx = col.box()
+                #coll = boxx.column(align=True)
+                col.label(rig_obj.name + ' (Rigify : '+ str(use_rigify) + ')', icon='ARMATURE_DATA')
+                #col.label('Active: ' + rig_obj.name)
+                #col.label('Rigify: True')
+                col.prop(props, 'use_humanoid_name', text='Use Humanoid bone names')
+                col.prop(props, 'unparent_ik_bones')
+                col.prop(props, 'global_scale')
+                col.separator()
+
+        c.separator()
+
+        r = c.row(align=True)
+        #r.operator("export_anim.rigify_fbx", text="Export current action", icon='ACTION_TWEAK')
+        r.operator("export_anim.rigify_fbx", text="Export current action", icon='ACTION')
+        if scene_props.show_action_export_options: r.alert = True
+        r.operator('scene.toggle_ue4_helper_options', text='', icon='SCRIPTWIN').prop = 'show_action_export_options'
+        if scene_props.show_action_export_options:
+            box = c.box()
+            if not rig_obj:
+                box.label("No rig selected!", icon="ACTION")
+            else:
+                if not rig_obj.animation_data or not rig_obj.animation_data.action:
+                    box.label("No active action!", icon="ACTION")
+                else:
+                    action = rig_obj.animation_data.action
+                    col = box.column(align=True)
+                    col.label(action.name, icon='ACTION')
+                    #col.label("Timeframe:")
+                    #col.prop(action.ue4h_props, 'timeframe', text='')
+                    col.prop(action.ue4h_props, 'timeframe', text='Timeframe')
+                    #col.prop(action.ue4h_props, 'hip_to_root', text="Hip XY location to Root location")
+        c.separator()
+
+        #c.operator("export_anim.rigify_fbx", text="Export all actions", icon='ACTION')
+        #c.separator()
+
+class UE4HelperNewObjectsPanel(bpy.types.Panel):
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "TOOLS"
+    #bl_context = "objectmode"
+    bl_label = "Add New Objects"
+    bl_category = "UE4 Helper"
+
+    def draw(self, context):
+        c = self.layout.column(align=True)
+        c.operator("object.add_standard_ue4_tpp", text="Add UE4 TPP Mesh", icon='ARMATURE_DATA')
+
+class ArmatureUE4HelperProps(bpy.types.PropertyGroup):
+    global_scale = FloatProperty(
+            name="Scale",
+            description = "Scale of objects multplied by 100 (Unreal default)",
+            min=0.001, max=1000.0,
+            default=1.0,
+            )
+
+    use_humanoid_name = BoolProperty(
+            name="Use Unreal humanoid bone names",
+            description="Use standard unreal humanoid bone name for easy retargeting.\n(Works best using Rigify)", 
+            default=True,
+            )
+
+    unparent_ik_bones = BoolProperty(
+            name="Unparent IK related bones",
+            description="EXPERIMENTAL! Unparent hand and leg bones so it can be transformed freely.\n(Useful to do squash and stretch without error. Only works with Rigify rig)", 
+            default=False,
+            )
+
+class ActionUE4HelperProps(bpy.types.PropertyGroup):
+    timeframe = EnumProperty(
+            name = "Timeframe of the action",
+            description="Option to select meshes to export", 
+            items=(
+                ('SCENE', "Scene timeframe", ""),
+                ('ACTION', "Action length", ""),
+                ('ACTION_MINUS_ONE', "Action length - 1 frame (loop animation)", ""),
+                ), 
+            default='ACTION',
+            )
+
+    #hip_to_root = BoolProperty(
+    #        name="Convert Hip XY location to Root location",
+    #        description="Useful if you want to use root motion on UE4", 
+    #        default=False,
+    #        )
+
+class SceneUE4HelperProps(bpy.types.PropertyGroup):
+    show_rig_export_options = BoolProperty(default=False)
+    show_action_export_options = BoolProperty(default=False)
 
 def register():
     bpy.utils.register_module(__name__)
+    bpy.types.Armature.ue4h_props = PointerProperty(type=ArmatureUE4HelperProps)
+    bpy.types.Action.ue4h_props = PointerProperty(type=ActionUE4HelperProps)
+    bpy.types.Scene.ue4h_props = PointerProperty(type=SceneUE4HelperProps)
 
 def unregister():
-	bpy.utils.unregister_module(__name__)
+    bpy.utils.unregister_module(__name__)
 
 if __name__ == "__main__":
     register()
+
+# TODO:
+# Deals with double neck (V)
+# Deals with single limb bone (V)
+# Add humanoid metarig settings (X)
+# - Number of limb bones
+# - Number of neck bones
+# - Fingers (thumb, other fingers, palms)
+# - Breast 
+# - Extra hip bones
+# - Face
+# Add exception bone option
+# Detect non rigify rig
+# Deals with non rigify bone
