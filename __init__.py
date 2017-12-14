@@ -1225,8 +1225,9 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
         #layout.prop(self, "global_scale")
         #layout.prop(self, "remove_unused_bones")
         #layout.prop(self, "use_humanoid_name")
-        layout.prop(props, "global_scale")
         layout.prop(props, "use_humanoid_name")
+        layout.prop(props, "unparent_ik_bones")
+        layout.prop(props, "global_scale")
 
     def execute(self, context):
         if not self.filepath:
