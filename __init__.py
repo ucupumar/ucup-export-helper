@@ -1507,7 +1507,6 @@ class UE4HelperSkeletalPanel(bpy.types.Panel):
 
         # Search for armature
         rig_obj = get_current_armature_object()
-        use_rigify = check_use_rigify(rig_obj.data)
 
         c = self.layout.column(align=True)
         r = c.row(align=True)
@@ -1524,6 +1523,7 @@ class UE4HelperSkeletalPanel(bpy.types.Panel):
                 col = box.column(align=True)
                 #boxx = col.box()
                 #coll = boxx.column(align=True)
+                use_rigify = check_use_rigify(rig_obj.data)
                 col.label(rig_obj.name + ' (Rigify : '+ str(use_rigify) + ')', icon='ARMATURE_DATA')
                 #col.label('Active: ' + rig_obj.name)
                 #col.label('Rigify: True')
