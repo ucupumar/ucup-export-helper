@@ -144,7 +144,7 @@ def get_current_armature_object():
     return arm_obj
 
 class SourceData():
-    rigify_object = None
+    rig_object = None
     mesh_objects = []
     failed_mesh_objects = []
 
@@ -241,10 +241,10 @@ suffix_dict = {
         '.R' : '_r',
         }
 
-def get_retarget_dict(rigify_object):
+def get_retarget_dict(rig_object):
     retarget_dict = std_retarget_dict.copy()
     # Check number of spines first
-    bones = rigify_object.data.bones
+    bones = rig_object.data.bones
 
     # Get limb bones
     limb_names = ['DEF-upper_arm.L', 'DEF-upper_arm.R',
@@ -479,7 +479,7 @@ def make_humanoid_constraint(context, rigify_object, export_rig_object):
     # Root constraint is really special case
     make_root_constraint(context, rigify_object, export_rig_object)
 
-def make_constraint(context, rigify_object, export_rig_object):
+def make_constraint(context, rig_object, export_rig_object):
 
     # Deselect all and select the rig
     bpy.ops.object.select_all(action='DESELECT')
@@ -502,11 +502,11 @@ def make_constraint(context, rigify_object, export_rig_object):
         bpy.ops.pose.constraint_add(type="COPY_SCALE")
         
         # Add constraint target based by rig source object
-        pose_bones[bone.name].constraints["Copy Location"].target = rigify_object
+        pose_bones[bone.name].constraints["Copy Location"].target = rig_object
         pose_bones[bone.name].constraints["Copy Location"].subtarget = bone.name
-        pose_bones[bone.name].constraints["Copy Rotation"].target = rigify_object
+        pose_bones[bone.name].constraints["Copy Rotation"].target = rig_object
         pose_bones[bone.name].constraints["Copy Rotation"].subtarget = bone.name
-        pose_bones[bone.name].constraints["Copy Scale"].target = rigify_object
+        pose_bones[bone.name].constraints["Copy Scale"].target = rig_object
         pose_bones[bone.name].constraints["Copy Scale"].subtarget = bone.name
         pose_bones[bone.name].constraints["Copy Scale"].target_space = 'LOCAL_WITH_PARENT'
         pose_bones[bone.name].constraints["Copy Scale"].owner_space = 'WORLD'
@@ -515,7 +515,7 @@ def make_constraint(context, rigify_object, export_rig_object):
     bpy.ops.object.mode_set(mode='OBJECT')
 
     # Root constraint is really special case
-    make_root_constraint(context, rigify_object, export_rig_object)
+    make_root_constraint(context, rig_object, export_rig_object)
 
 def get_vertex_group_names(objects):
     vg_names = []
@@ -536,22 +536,22 @@ def get_vertex_group_names(objects):
 #    
 #    return mesh_objects
 
-#def extract_export_rig(context, rigify_object, scale, meshes_to_evaluate = []):
-def extract_export_rig(context, rigify_object, scale):
+#def extract_export_rig(context, source_object, scale, meshes_to_evaluate = []):
+def extract_export_rig(context, source_object, scale, use_rigify=False):
 
     scene = context.scene
 
     # Check if this object is a proxy or not
-    if rigify_object.proxy:
-        rigify_object = rigify_object.proxy
+    if source_object.proxy:
+        source_object = source_object.proxy
 
     # Set to object mode
     if context.mode != 'OBJECT':
         bpy.ops.object.mode_set(mode='OBJECT')
 
     # Duplicate Rigify Object
-    export_rig_ob = rigify_object.copy()
-    export_rig_ob.name =(rigify_object.name + '_export')
+    export_rig_ob = source_object.copy()
+    export_rig_ob.name =(source_object.name + '_export')
     export_rig_ob.data = export_rig_ob.data.copy()
     export_rig_ob.scale *= scale
     export_rig_ob.name = 'root'
@@ -573,17 +573,19 @@ def extract_export_rig(context, rigify_object, scale):
     edit_bones = export_rig.edit_bones
     
     # Rearrange parent (RIGIFY ONLY)
-    for bone in edit_bones:
-        if bone.parent and bone.parent.name.startswith('ORG-'):
-            parent_name = bone.parent.name.replace('ORG-', 'DEF-')
-            parent = edit_bones.get(parent_name)
-            bone.parent = parent
+    if use_rigify:
+        for bone in edit_bones:
+            if bone.parent and bone.parent.name.startswith('ORG-'):
+                parent_name = bone.parent.name.replace('ORG-', 'DEF-')
+                parent = edit_bones.get(parent_name)
+                bone.parent = parent
 
     # Delete other than deform bones
     for bone in edit_bones:
+        b = export_rig.bones.get(bone.name)
         #if 'DEF-' not in bone.name and bone.name != 'root':
         #if not bone.use_deform and bone.name != 'root':
-        if not bone.use_deform:
+        if not bone.use_deform and not b.ue4h_props.force_export:
             edit_bones.remove(bone)
     
     # Change active bone layers to layer 0
@@ -620,7 +622,8 @@ def extract_export_rig(context, rigify_object, scale):
     export_rig_ob.animation_data_clear()
 
     # Remove rig_id used by rigify rig_ui.py (RIGIFY ONLY)
-    bpy.ops.wm.properties_remove(data_path = 'active_object.data', property = 'rig_id')
+    if use_rigify:
+        bpy.ops.wm.properties_remove(data_path = 'active_object.data', property = 'rig_id')
 
     # Clear locking bones
     pose_bones = export_rig_ob.pose.bones
@@ -670,25 +673,33 @@ def extract_export_meshes(context, source_data, export_rig_ob, scale):
     # Duplicate Meshes
     export_objs = []
     for obj in source_data.mesh_objects:
-        new_obj = obj.copy()
-        new_obj.data = new_obj.data.copy()
-        scene.objects.link(new_obj)
+        obj.select = True
+        scene.objects.active = obj
+
+        bpy.ops.object.duplicate()
+
+        new_obj = scene.objects.active
+
+        #new_obj = obj.copy()
+        #new_obj.data = new_obj.data.copy()
+        #scene.objects.link(new_obj)
 
         # New objects scaling
-        #if new_obj.parent != source_data.rigify_object:
+        #if new_obj.parent != source_data.rig_object:
         #    print('aaaaaaaa')
         #    new_obj.scale *= scale
 
         # Select this mesh
-        new_obj.select = True
-        scene.objects.active = new_obj
+        #new_obj.select = True
+        #scene.objects.active = new_obj
 
         # Clear parent
         bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
 
         # Scale mesh
         new_obj.scale *= scale
-        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        new_obj.location *= scale
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 
         # Parent to export rig
         new_obj.parent = export_rig_ob
@@ -700,6 +711,7 @@ def extract_export_meshes(context, source_data, export_rig_ob, scale):
         mod_armature = [mod for mod in new_obj.modifiers if mod.type == 'ARMATURE'][0]
         mod_armature.object = export_rig_ob
 
+        #obj.select = False
         new_obj.select = False
 
     # Apply transform to exported rig and mesh
@@ -896,18 +908,19 @@ def unparent_ik_related_bones(use_humanoid_name, rigify_obj, export_rig_obj):
     # Back to object mode
     bpy.ops.object.mode_set(mode='OBJECT')
 
-def evaluate_and_get_source_data(objects):
+def evaluate_and_get_source_data(scene, objects):
 
     source_data = SourceData()
 
     # If only select armature object
     if len(objects) == 1 and objects[0].type == 'ARMATURE':
-        source_data.rigify_object = objects[0]
-        source_data.mesh_objects = [o for o in bpy.data.objects if (
+        source_data.rig_object = objects[0]
+        source_data.mesh_objects = [o for o in scene.objects if (
             o.type == 'MESH' and
+            not o.ue4h_props.disable_export and
             any(mod for mod in o.modifiers if (
                     mod.type == 'ARMATURE' and 
-                    mod.object == source_data.rigify_object
+                    mod.object == source_data.rig_object
                 ))
             )]
     else:
@@ -921,12 +934,13 @@ def evaluate_and_get_source_data(objects):
         
         # If select at least one armature
         elif len(armature_objs) == 1:
-            source_data.rigify_object = armature_objs[0]
+            source_data.rig_object = armature_objs[0]
 
             # Evaluating mesh to be exported or not
             for obj in objects:
+                if obj.disable_export: continue
                 if any([mod for mod in obj.modifiers if (
-                    mod.type == 'ARMATURE' and mod.object == source_data.rigify_object)]):
+                    mod.type == 'ARMATURE' and mod.object == source_data.rig_object)]):
                     source_data.mesh_objects.append(obj)
                 elif obj.type == 'MESH':
                     source_data.failed_mesh_objects.append(obj)
@@ -944,7 +958,7 @@ def evaluate_and_get_source_data(objects):
                 # If object has armature modifier
                 if any(armature_mod):
                     # This object is legit to export
-                    source_data.mesh_objects.append(obj)
+                    #source_data.mesh_objects.append(obj)
 
                     # Add armature object used to list
                     armature_mod = armature_mod[0]
@@ -964,7 +978,14 @@ def evaluate_and_get_source_data(objects):
             elif len(armature_object_list) > 1:
                 return "FAILED! There are more than one armature object variation on selected objects"
 
-            source_data.rigify_object = armature_object_list[0]
+            source_data.rig_object = armature_object_list[0]
+
+            # Add other objects using same rig object
+            for obj in scene.objects:
+                if obj.ue4h_props.disable_export: continue
+                for mod in obj.modifiers:
+                    if mod.type == 'ARMATURE' and mod.object == source_data.rig_object:
+                        source_data.mesh_objects.append(obj)
     
     # If not found any mesh to be export
     if not(source_data.mesh_objects):
@@ -1069,8 +1090,9 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
         #layout.prop(self, "remove_unused_bones")
         #layout.prop(self, "use_humanoid_name")
         #layout.prop(self, "unparent_ik_bones")
-        layout.label(text="Timeframe of the action:")
-        layout.prop(props, "timeframe", "")
+        layout.label(action.name, icon='ACTION')
+        #layout.label(text="Timeframe of the action:")
+        layout.prop(props, "timeframe", text="Timeframe")
         #layout.prop(props, "hip_to_root")
 
     def invoke(self, context, event):
@@ -1097,10 +1119,10 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
 
         # Check if using rigify by checking the widget of root bone
         use_rigify = check_use_rigify(rig_obj.data)
-        if not use_rigify:
-            state.load(context)
-            self.report({'ERROR'}, 'This addon only works with Blender 2.78 Rigify! (More support coming soon!)')
-            return{'CANCELLED'}
+        #if not use_rigify:
+        #    state.load(context)
+        #    self.report({'ERROR'}, 'This addon only works with Blender 2.78 Rigify! (More support coming soon!)')
+        #    return{'CANCELLED'}
 
         # Check action
         action = rig_obj.animation_data.action
@@ -1114,7 +1136,7 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
             return{'CANCELLED'}
 
         # Extract export rig from rigify
-        export_rig_ob = extract_export_rig(context, rig_obj, scale)
+        export_rig_ob = extract_export_rig(context, rig_obj, scale, use_rigify)
 
         # Scale original rig
         rig_obj.scale *= scale
@@ -1126,7 +1148,14 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
             if action_props.timeframe == 'ACTION_MINUS_ONE':
                 scene.frame_end -= 1
 
-        if not rig_props.use_humanoid_name:
+        if use_rigify and rig_props.use_humanoid_name:
+            # Retarget bone name
+            convert_to_unreal_humanoid(rig_obj, export_rig_ob, scale)
+
+            # Make humanoid constraint
+            make_humanoid_constraint(context, rig_obj, export_rig_ob)
+
+        else:
             # Make constraint
             make_constraint(context, rig_obj, export_rig_ob)
 
@@ -1134,14 +1163,7 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
             #if action_props.hip_to_root:
             #    move_root(scene, export_rig_ob)
 
-        else:
-            # Retarget bone name
-            convert_to_unreal_humanoid(rig_obj, export_rig_ob, scale)
-
-            # Make humanoid constraint
-            make_humanoid_constraint(context, rig_obj, export_rig_ob)
-
-        if rig_props.unparent_ik_bones:
+        if use_rigify and rig_props.unparent_ik_bones:
             unparent_ik_related_bones(rig_props.use_humanoid_name, rig_obj, export_rig_ob)
 
         # Select only export rig
@@ -1170,6 +1192,7 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
                 bake_anim_use_all_bones=True,
                 bake_anim_use_nla_strips=False,
                 bake_anim_use_all_actions=False,
+                bake_anim_force_startend_keying=True,
                 bake_anim_step=1.0,
                 bake_anim_simplify_factor=0.0,
                 add_leaf_bones=False,
@@ -1220,13 +1243,17 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
     def draw(self, context):
         layout = self.layout
         rig_obj = get_current_armature_object()
+        use_rigify = check_use_rigify(rig_obj.data)
         props = rig_obj.data.ue4h_props
         #layout.label('No specific options yet!')
         #layout.prop(self, "global_scale")
         #layout.prop(self, "remove_unused_bones")
         #layout.prop(self, "use_humanoid_name")
-        layout.prop(props, "use_humanoid_name")
-        layout.prop(props, "unparent_ik_bones")
+        layout.label(rig_obj.name + ' (Rigify : '+ str(use_rigify) + ')', icon='ARMATURE_DATA')
+        c = layout.column()
+        c.active = use_rigify
+        c.prop(props, "use_humanoid_name")
+        c.prop(props, "unparent_ik_bones")
         layout.prop(props, "global_scale")
 
     def execute(self, context):
@@ -1237,7 +1264,7 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
         state = SaveState(context)
 
         # Evaluate selected objects to export
-        source_data = evaluate_and_get_source_data(context.selected_objects)
+        source_data = evaluate_and_get_source_data(context.scene, context.selected_objects)
 
         # If evaluate returns string it means error
         if type(source_data) is str:
@@ -1246,21 +1273,21 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
             return{'CANCELLED'}
 
         # Scale of the objects
-        rig_props = source_data.rigify_object.data.ue4h_props
+        rig_props = source_data.rig_object.data.ue4h_props
         scale = ABS_SCALE * rig_props.global_scale
 
         # Check if using rigify by checking the widget of root bone
-        use_rigify = check_use_rigify(source_data.rigify_object.data)
-        if not use_rigify:
-            state.load(context)
-            self.report({'ERROR'}, 'This addon only works with Blender 2.78 Rigify! (More support coming soon!)')
-            return{'CANCELLED'}
+        use_rigify = check_use_rigify(source_data.rig_object.data)
+        #if not use_rigify:
+        #    state.load(context)
+        #    self.report({'ERROR'}, 'This addon only works with Blender 2.78 Rigify! (More support coming soon!)')
+        #    return{'CANCELLED'}
 
         # Get export rig
         #if self.remove_unused_bones:
-        #    export_rig_ob = extract_export_rig(context, source_data.rigify_object, scale, source_data.mesh_objects)
-        #else: export_rig_ob = extract_export_rig(context, source_data.rigify_object, scale)
-        export_rig_ob = extract_export_rig(context, source_data.rigify_object, scale)
+        #    export_rig_ob = extract_export_rig(context, source_data.rig_object, scale, source_data.mesh_objects)
+        #else: export_rig_ob = extract_export_rig(context, source_data.rig_object, scale)
+        export_rig_ob = extract_export_rig(context, source_data.rig_object, scale, use_rigify)
 
         # If returns string it means error
         #if type(export_rig_ob) is str:
@@ -1281,11 +1308,12 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
             obj.select = True
 
         # Retarget bone name and vertex groups (RIGIFY ONLY)
-        if rig_props.use_humanoid_name:
-            convert_to_unreal_humanoid(source_data.rigify_object, export_rig_ob, scale, export_mesh_objs)
+        if use_rigify:
+            if rig_props.use_humanoid_name:
+                convert_to_unreal_humanoid(source_data.rig_object, export_rig_ob, scale, export_mesh_objs)
 
-        if rig_props.unparent_ik_bones:
-            unparent_ik_related_bones(rig_props.use_humanoid_name, source_data.rigify_object, export_rig_ob)
+            if rig_props.unparent_ik_bones:
+                unparent_ik_related_bones(rig_props.use_humanoid_name, source_data.rig_object, export_rig_ob)
 
         #return {'FINISHED'}
 
@@ -1310,6 +1338,7 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
                 bake_anim_use_all_bones=True,
                 bake_anim_use_nla_strips=True,
                 bake_anim_use_all_actions=True,
+                bake_anim_force_startend_keying=True,
                 bake_anim_step=1.0,
                 bake_anim_simplify_factor=1.0,
                 add_leaf_bones=False,
@@ -1390,7 +1419,7 @@ class RotateBones(bpy.types.Operator):
             source_matrix[eb.name] = eb.matrix
         bpy.ops.object.mode_set(mode='OBJECT')
 
-        print()
+        #print()
 
         # Go to target_obj
         scene.objects.active = target_obj
@@ -1528,8 +1557,10 @@ class UE4HelperSkeletalPanel(bpy.types.Panel):
                 col.label(rig_obj.name + ' (Rigify : '+ str(use_rigify) + ')', icon='ARMATURE_DATA')
                 #col.label('Active: ' + rig_obj.name)
                 #col.label('Rigify: True')
-                col.prop(props, 'use_humanoid_name', text='Use Humanoid bone names')
-                col.prop(props, 'unparent_ik_bones')
+                cc = col.column(align=True)
+                cc.active = use_rigify
+                cc.prop(props, 'use_humanoid_name', text='Use Humanoid bone names')
+                cc.prop(props, 'unparent_ik_bones')
                 col.prop(props, 'global_scale')
                 col.separator()
 
@@ -1560,6 +1591,46 @@ class UE4HelperSkeletalPanel(bpy.types.Panel):
         #c.operator("export_anim.rigify_fbx", text="Export all actions", icon='ACTION')
         #c.separator()
 
+class BONE_PT_ue4_helper(bpy.types.Panel):
+    bl_label = "UE4 Helper Properties"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = "bone"
+    #bl_options = {'DEFAULT_OPEN'}
+
+    def draw(self, context):
+        bone = bpy.context.active_bone
+        if not bone:
+            self.layout.label('No active bone!')
+            return
+        arm = bpy.context.object.data
+        bone = arm.bones.get(bone.name)
+        props = bone.ue4h_props
+        c = self.layout.column()
+        c.active = not bone.use_deform
+        c.prop(props, 'force_export')
+        #self.layout.label('Nothing to see here!')
+
+class OBJECT_PT_ue4_helper(bpy.types.Panel):
+    bl_label = "UE4 Helper Properties"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = "object"
+    #bl_options = {'DEFAULT_OPEN'}
+
+    def draw(self, context):
+        obj = bpy.context.object
+        rig_obj = get_current_armature_object()
+        #if not rig_obj:
+        #    self.layout.label('No active rig object found!')
+        #    return
+        props = obj.ue4h_props
+        c = self.layout.column()
+        c.active = True if rig_obj else False
+        #c.active = not bone.use_deform
+        c.prop(props, 'disable_export')
+        #self.layout.label('Nothing to see here!')
+
 class UE4HelperNewObjectsPanel(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
@@ -1570,6 +1641,20 @@ class UE4HelperNewObjectsPanel(bpy.types.Panel):
     def draw(self, context):
         c = self.layout.column(align=True)
         c.operator("object.add_standard_ue4_tpp", text="Add UE4 TPP Mesh", icon='ARMATURE_DATA')
+
+class ObjectUE4HelperProps(bpy.types.PropertyGroup):
+    disable_export = BoolProperty(
+            name="Disable Export Object",
+            description = "Disable export object even if using exported armature in its modifier",
+            default=False,
+            )
+
+class BoneUE4HelperProps(bpy.types.PropertyGroup):
+    force_export = BoolProperty(
+            name="Force Export Bone",
+            description = "Force export bone even if not using deform option",
+            default=False,
+            )
 
 class ArmatureUE4HelperProps(bpy.types.PropertyGroup):
     global_scale = FloatProperty(
@@ -1618,6 +1703,8 @@ def register():
     bpy.types.Armature.ue4h_props = PointerProperty(type=ArmatureUE4HelperProps)
     bpy.types.Action.ue4h_props = PointerProperty(type=ActionUE4HelperProps)
     bpy.types.Scene.ue4h_props = PointerProperty(type=SceneUE4HelperProps)
+    bpy.types.Bone.ue4h_props = PointerProperty(type=BoneUE4HelperProps)
+    bpy.types.Object.ue4h_props = PointerProperty(type=ObjectUE4HelperProps)
 
 def unregister():
     bpy.utils.unregister_module(__name__)
@@ -1635,6 +1722,11 @@ if __name__ == "__main__":
 # - Breast 
 # - Extra hip bones
 # - Face
-# Add exception bone option
-# Detect non rigify rig
-# Deals with non rigify bone
+# Add exception bone option (V)
+# Detect non rigify rig (V)
+# Deals with non rigify bone (V)
+# Add export mesh exception
+# Support for old rigify
+# Batch export skeletal mesh and actions
+# Support for static mesh
+# Make UE4 TPP action can be used using original unreal TPP rig
