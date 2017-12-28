@@ -1725,7 +1725,7 @@ if __name__ == "__main__":
 # Add exception bone option (V)
 # Detect non rigify rig (V)
 # Deals with non rigify bone (V)
-# Add export mesh exception
+# Add export mesh exception (V)
 # Support for old rigify
 # Batch export skeletal mesh and actions
 # Support for static mesh
