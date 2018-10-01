@@ -938,7 +938,7 @@ def evaluate_and_get_source_data(scene, objects):
 
             # Evaluating mesh to be exported or not
             for obj in objects:
-                if obj.disable_export: continue
+                if obj.ue4h_props.disable_export: continue
                 if any([mod for mod in obj.modifiers if (
                     mod.type == 'ARMATURE' and mod.object == source_data.rig_object)]):
                     source_data.mesh_objects.append(obj)
