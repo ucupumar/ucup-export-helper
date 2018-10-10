@@ -93,25 +93,6 @@ suffix_dict = {
         '.R' : '_r',
         }
 
-class SaveState():
-    def __init__(self, context):
-        self.active = context.object
-        self.select = context.selected_objects
-        self.mode = context.mode
-        self.frame_start = context.scene.frame_start
-        self.frame_end = context.scene.frame_end
-    
-    def load(self, context):
-        scene = context.scene
-        for obj in bpy.data.objects:
-            if obj in self.select:
-                obj.select = True
-            else: obj.select = False
-        scene.objects.active = self.active
-        bpy.ops.object.mode_set(mode=self.mode)
-        scene.frame_start = self.frame_start
-        scene.frame_end = self.frame_end
-
 def get_retarget_dict(rig_object):
     retarget_dict = std_retarget_dict.copy()
     # Check number of spines first
@@ -669,9 +650,10 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
         state = SaveState(context)
 
         # Evaluate selected objects to export
-        rig_object, mesh_objects, failed_mesh_objects = evaluate_and_get_source_data(context.scene, context.selected_objects)
+        rig_object, mesh_objects, failed_mesh_objects = evaluate_and_get_source_data(
+                context.scene, context.selected_objects)
 
-        # If evaluate returns string it means error
+        # If valid mesh isn't found
         if not mesh_objects:
             state.load(context)
             self.report({'ERROR'}, "FAILED! No objects valid to export! Make sure your armature modifiers are properly set.")
@@ -681,7 +663,7 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
         rig_props = rig_object.data.ue4h_props
         scale = ABS_SCALE * rig_props.global_scale
 
-        # Check if using rigify by checking the widget of root bone
+        # Check if armature using rigify
         use_rigify = check_use_rigify(rig_object.data)
         #if not use_rigify:
         #    state.load(context)

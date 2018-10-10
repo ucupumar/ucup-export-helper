@@ -9,23 +9,26 @@ bl_info = {
     "category": "Import-Export",
 }
 
-if "bpy" not in locals():
-    from . import common, ue4, hero_tpp
-else:
-#if "bpy" in locals():
+#if "bpy" not in locals():
+from . import common, ue4, godot, hero_tpp
+#else:
+if "bpy" in locals():
     import imp
     imp.reload(common)
     imp.reload(ue4)
+    imp.reload(godot)
     imp.reload(hero_tpp)
 
 import bpy
 
 def register():
     ue4.register()
+    godot.register()
     hero_tpp.register()
 
 def unregister():
     ue4.unregister()
+    godot.unregister()
     hero_tpp.unregister()
 
 if __name__ == "__main__":

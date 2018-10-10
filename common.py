@@ -1,5 +1,31 @@
 import bpy, os
 
+class SaveState():
+    def __init__(self, context):
+        self.active = context.object
+        self.select = context.selected_objects
+        self.mode = context.mode
+        self.frame_start = context.scene.frame_start
+        self.frame_end = context.scene.frame_end
+
+        if context.object.animation_data:
+            self.action = context.object.animation_data.action
+        else: self.action = None
+    
+    def load(self, context):
+        scene = context.scene
+        for obj in bpy.data.objects:
+            if obj in self.select:
+                obj.select = True
+            else: obj.select = False
+        scene.objects.active = self.active
+        bpy.ops.object.mode_set(mode=self.mode)
+        scene.frame_start = self.frame_start
+        scene.frame_end = self.frame_end
+
+        if self.action:
+            context.object.animation_data.action = self.action
+
 def get_addon_filepath():
 
     root = bpy.utils.script_path_user()
@@ -453,4 +479,72 @@ def check_use_rigify(rig):
     root_bone = rig.bones.get('MCH-WGT-hips')
     if not root_bone: return False
     return True
+
+def move_root(scene, obj):
+
+    # Deselect all and select the rig
+    bpy.ops.object.select_all(action='DESELECT')
+    scene.objects.active = obj
+    obj.select = True
+
+    # Bake first
+    bpy.ops.nla.bake(frame_start=scene.frame_start, 
+            frame_end=scene.frame_end, 
+            only_selected=False, 
+            visual_keying=True, 
+            clear_constraints=True, 
+            bake_types={'POSE'})
+
+    obj.animation_data.action.name = 'ZZ_EXPORT_TEMP_0'
+
+    # Duplicate export rig
+    temp_ob = obj.copy()
+    temp_ob.data = obj.data.copy()
+    scene.objects.link(temp_ob)
+    temp_ob.select = False
+
+    # Go to pose mode
+    bpy.ops.object.mode_set(mode='POSE')
+
+    # Shorten path
+    bones = obj.data.bones
+    pose_bones = obj.pose.bones
+    
+    # Root follow hips but only x and y axis
+    bones.active = bones['root']
+    bpy.ops.pose.constraint_add(type="COPY_LOCATION")
+    pose_bones['root'].constraints['Copy Location'].target = temp_ob
+    pose_bones['root'].constraints['Copy Location'].subtarget = 'DEF-hips'
+    pose_bones['root'].constraints['Copy Location'].use_z = False
+    
+    # Hips follow original hips
+    bones.active = bones['DEF-hips']
+    bpy.ops.pose.constraint_add(type="COPY_LOCATION")
+    pose_bones['DEF-hips'].constraints['Copy Location'].target = temp_ob
+    pose_bones['DEF-hips'].constraints['Copy Location'].subtarget = 'DEF-hips'
+    
+    # Bake again!
+    bpy.ops.nla.bake(frame_start=scene.frame_start, 
+            frame_end=scene.frame_end, 
+            only_selected=False, 
+            visual_keying=True, 
+            clear_constraints=True, 
+            bake_types={'POSE'})   
+
+    obj.animation_data.action.name = 'ZZ_EXPORT_TEMP_1'
+
+    # Back to object mode
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    # Select temp object
+    scene.objects.active = temp_ob
+    obj.select = False
+    temp_ob.select = True
+
+    # Delete temp object
+    bpy.ops.object.delete()
+
+    # Select back original object
+    scene.objects.active = obj
+    obj.select = True
 
