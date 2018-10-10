@@ -143,11 +143,6 @@ def get_current_armature_object():
             break
     return arm_obj
 
-class SourceData():
-    rig_object = None
-    mesh_objects = []
-    failed_mesh_objects = []
-
 class SaveState():
     def __init__(self, context):
         self.active = context.object
@@ -659,7 +654,7 @@ def extract_export_rig(context, source_object, scale, use_rigify=False):
 
     return export_rig_ob
 
-def extract_export_meshes(context, source_data, export_rig_ob, scale):
+def extract_export_meshes(context, mesh_objects, export_rig_ob, scale):
     
     scene = context.scene
 
@@ -672,7 +667,8 @@ def extract_export_meshes(context, source_data, export_rig_ob, scale):
 
     # Duplicate Meshes
     export_objs = []
-    for obj in source_data.mesh_objects:
+    for obj in mesh_objects:
+        #print(obj.name)
         obj.select = True
         scene.objects.active = obj
 
@@ -685,7 +681,7 @@ def extract_export_meshes(context, source_data, export_rig_ob, scale):
         #scene.objects.link(new_obj)
 
         # New objects scaling
-        #if new_obj.parent != source_data.rig_object:
+        #if new_obj.parent != rig_object:
         #    print('aaaaaaaa')
         #    new_obj.scale *= scale
 
@@ -910,17 +906,19 @@ def unparent_ik_related_bones(use_humanoid_name, rigify_obj, export_rig_obj):
 
 def evaluate_and_get_source_data(scene, objects):
 
-    source_data = SourceData()
+    rig_object = None
+    mesh_objects = []
+    failed_mesh_objects = []
 
     # If only select armature object
     if len(objects) == 1 and objects[0].type == 'ARMATURE':
-        source_data.rig_object = objects[0]
-        source_data.mesh_objects = [o for o in scene.objects if (
+        rig_object = objects[0]
+        mesh_objects = [o for o in scene.objects if (
             o.type == 'MESH' and
             not o.ue4h_props.disable_export and
             any(mod for mod in o.modifiers if (
                     mod.type == 'ARMATURE' and 
-                    mod.object == source_data.rig_object
+                    mod.object == rig_object
                 ))
             )]
     else:
@@ -934,16 +932,16 @@ def evaluate_and_get_source_data(scene, objects):
         
         # If select at least one armature
         elif len(armature_objs) == 1:
-            source_data.rig_object = armature_objs[0]
+            rig_object = armature_objs[0]
 
             # Evaluating mesh to be exported or not
             for obj in objects:
                 if obj.ue4h_props.disable_export: continue
                 if any([mod for mod in obj.modifiers if (
-                    mod.type == 'ARMATURE' and mod.object == source_data.rig_object)]):
-                    source_data.mesh_objects.append(obj)
+                    mod.type == 'ARMATURE' and mod.object == rig_object)]):
+                    mesh_objects.append(obj)
                 elif obj.type == 'MESH':
-                    source_data.failed_mesh_objects.append(obj)
+                    failed_mesh_objects.append(obj)
 
         # If not select any armatures, search for possible armature
         elif len(armature_objs) == 0:
@@ -958,7 +956,7 @@ def evaluate_and_get_source_data(scene, objects):
                 # If object has armature modifier
                 if any(armature_mod):
                     # This object is legit to export
-                    #source_data.mesh_objects.append(obj)
+                    #mesh_objects.append(obj)
 
                     # Add armature object used to list
                     armature_mod = armature_mod[0]
@@ -968,7 +966,7 @@ def evaluate_and_get_source_data(scene, objects):
                 # If object didn't have armature modifier or didn't set armature object,
                 # do not export
                 else:
-                    source_data.failed_mesh_objects.append(obj)
+                    failed_mesh_objects.append(obj)
                 
             # If no armature found
             if not any(armature_object_list):
@@ -978,20 +976,20 @@ def evaluate_and_get_source_data(scene, objects):
             elif len(armature_object_list) > 1:
                 return "FAILED! There are more than one armature object variation on selected objects"
 
-            source_data.rig_object = armature_object_list[0]
+            rig_object = armature_object_list[0]
 
             # Add other objects using same rig object
             for obj in scene.objects:
                 if obj.ue4h_props.disable_export: continue
                 for mod in obj.modifiers:
-                    if mod.type == 'ARMATURE' and mod.object == source_data.rig_object:
-                        source_data.mesh_objects.append(obj)
+                    if mod.type == 'ARMATURE' and mod.object == rig_object:
+                        mesh_objects.append(obj)
     
     # If not found any mesh to be export
-    if not(source_data.mesh_objects):
-        return "FAILED! No objects valid to export! Make sure your armature modifiers are properly set."
+    #if not(mesh_objects):
+    #    return "FAILED! No objects valid to export! Make sure your armature modifiers are properly set."
 
-    return source_data
+    return rig_object, mesh_objects, failed_mesh_objects
 
 # Check if using rigify by checking existance of MCH-WGT-hips
 def check_use_rigify(rig):
@@ -1264,20 +1262,20 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
         state = SaveState(context)
 
         # Evaluate selected objects to export
-        source_data = evaluate_and_get_source_data(context.scene, context.selected_objects)
+        rig_object, mesh_objects, failed_mesh_objects = evaluate_and_get_source_data(context.scene, context.selected_objects)
 
         # If evaluate returns string it means error
-        if type(source_data) is str:
+        if not mesh_objects:
             state.load(context)
-            self.report({'ERROR'}, source_data)
+            self.report({'ERROR'}, "FAILED! No objects valid to export! Make sure your armature modifiers are properly set.")
             return{'CANCELLED'}
 
         # Scale of the objects
-        rig_props = source_data.rig_object.data.ue4h_props
+        rig_props = rig_object.data.ue4h_props
         scale = ABS_SCALE * rig_props.global_scale
 
         # Check if using rigify by checking the widget of root bone
-        use_rigify = check_use_rigify(source_data.rig_object.data)
+        use_rigify = check_use_rigify(rig_object.data)
         #if not use_rigify:
         #    state.load(context)
         #    self.report({'ERROR'}, 'This addon only works with Blender 2.78 Rigify! (More support coming soon!)')
@@ -1285,9 +1283,9 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
 
         # Get export rig
         #if self.remove_unused_bones:
-        #    export_rig_ob = extract_export_rig(context, source_data.rig_object, scale, source_data.mesh_objects)
-        #else: export_rig_ob = extract_export_rig(context, source_data.rig_object, scale)
-        export_rig_ob = extract_export_rig(context, source_data.rig_object, scale, use_rigify)
+        #    export_rig_ob = extract_export_rig(context, rig_object, scale, mesh_objects)
+        #else: export_rig_ob = extract_export_rig(context, rig_object, scale)
+        export_rig_ob = extract_export_rig(context, rig_object, scale, use_rigify)
 
         # If returns string it means error
         #if type(export_rig_ob) is str:
@@ -1296,7 +1294,7 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
         #    return{'CANCELLED'}
 
         # Get export mesh objects
-        export_mesh_objs = extract_export_meshes(context, source_data, export_rig_ob, scale)
+        export_mesh_objs = extract_export_meshes(context, mesh_objects, export_rig_ob, scale)
 
         # Set to object mode
         if context.mode != 'OBJECT':
@@ -1310,10 +1308,10 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
         # Retarget bone name and vertex groups (RIGIFY ONLY)
         if use_rigify:
             if rig_props.use_humanoid_name:
-                convert_to_unreal_humanoid(source_data.rig_object, export_rig_ob, scale, export_mesh_objs)
+                convert_to_unreal_humanoid(rig_object, export_rig_ob, scale, export_mesh_objs)
 
             if rig_props.unparent_ik_bones:
-                unparent_ik_related_bones(rig_props.use_humanoid_name, source_data.rig_object, export_rig_ob)
+                unparent_ik_related_bones(rig_props.use_humanoid_name, rig_object, export_rig_ob)
 
         #return {'FINISHED'}
 
@@ -1360,11 +1358,11 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
         state.load(context)
 
         # Failed export objects
-        if any(source_data.failed_mesh_objects):
+        if any(failed_mesh_objects):
             obj_names = ''
-            for i, obj in enumerate(source_data.failed_mesh_objects):
+            for i, obj in enumerate(failed_mesh_objects):
                 obj_names += obj.name
-                if i != len(source_data.failed_mesh_objects) - 1:
+                if i != len(failed_mesh_objects) - 1:
                     obj_names += ', '
             
             self.report({'INFO'}, "INFO: Cannot export mesh [" + obj_names + "] because of reasons")
