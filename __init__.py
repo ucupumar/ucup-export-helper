@@ -1065,7 +1065,6 @@ def move_root(scene, obj):
     scene.objects.active = obj
     obj.select = True
 
-#class ExportRigifyAnim(bpy.types.Operator, ):
 class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHelper): 
     bl_idname = "export_anim.rigify_fbx"
     bl_label = "Export Rigify action"
@@ -1088,7 +1087,7 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
         #layout.prop(self, "remove_unused_bones")
         #layout.prop(self, "use_humanoid_name")
         #layout.prop(self, "unparent_ik_bones")
-        layout.label(action.name, icon='ACTION')
+        layout.label(text=action.name, icon='ACTION')
         #layout.label(text="Timeframe of the action:")
         layout.prop(props, "timeframe", text="Timeframe")
         #layout.prop(props, "hip_to_root")
@@ -1243,11 +1242,11 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
         rig_obj = get_current_armature_object()
         use_rigify = check_use_rigify(rig_obj.data)
         props = rig_obj.data.ue4h_props
-        #layout.label('No specific options yet!')
+        #layout.label(text='No specific options yet!')
         #layout.prop(self, "global_scale")
         #layout.prop(self, "remove_unused_bones")
         #layout.prop(self, "use_humanoid_name")
-        layout.label(rig_obj.name + ' (Rigify : '+ str(use_rigify) + ')', icon='ARMATURE_DATA')
+        layout.label(text=rig_obj.name + ' (Rigify : '+ str(use_rigify) + ')', icon='ARMATURE_DATA')
         c = layout.column()
         c.active = use_rigify
         c.prop(props, "use_humanoid_name")
@@ -1545,16 +1544,16 @@ class UE4HelperSkeletalPanel(bpy.types.Panel):
         if scene_props.show_rig_export_options:
             box = c.box()
             if not rig_obj:
-                box.label("No rig selected!", icon="ARMATURE_DATA")
+                box.label(text="No rig selected!", icon="ARMATURE_DATA")
             else:
                 props = rig_obj.data.ue4h_props
                 col = box.column(align=True)
                 #boxx = col.box()
                 #coll = boxx.column(align=True)
                 use_rigify = check_use_rigify(rig_obj.data)
-                col.label(rig_obj.name + ' (Rigify : '+ str(use_rigify) + ')', icon='ARMATURE_DATA')
-                #col.label('Active: ' + rig_obj.name)
-                #col.label('Rigify: True')
+                col.label(text=rig_obj.name + ' (Rigify : '+ str(use_rigify) + ')', icon='ARMATURE_DATA')
+                #col.label(text='Active: ' + rig_obj.name)
+                #col.label(text='Rigify: True')
                 cc = col.column(align=True)
                 cc.active = use_rigify
                 cc.prop(props, 'use_humanoid_name', text='Use Humanoid bone names')
@@ -1572,15 +1571,15 @@ class UE4HelperSkeletalPanel(bpy.types.Panel):
         if scene_props.show_action_export_options:
             box = c.box()
             if not rig_obj:
-                box.label("No rig selected!", icon="ACTION")
+                box.label(text="No rig selected!", icon="ACTION")
             else:
                 if not rig_obj.animation_data or not rig_obj.animation_data.action:
-                    box.label("No active action!", icon="ACTION")
+                    box.label(text="No active action!", icon="ACTION")
                 else:
                     action = rig_obj.animation_data.action
                     col = box.column(align=True)
-                    col.label(action.name, icon='ACTION')
-                    #col.label("Timeframe:")
+                    col.label(text=action.name, icon='ACTION')
+                    #col.label(text="Timeframe:")
                     #col.prop(action.ue4h_props, 'timeframe', text='')
                     col.prop(action.ue4h_props, 'timeframe', text='Timeframe')
                     #col.prop(action.ue4h_props, 'hip_to_root', text="Hip XY location to Root location")
@@ -1599,7 +1598,7 @@ class BONE_PT_ue4_helper(bpy.types.Panel):
     def draw(self, context):
         bone = bpy.context.active_bone
         if not bone:
-            self.layout.label('No active bone!')
+            self.layout.label(text='No active bone!')
             return
         arm = bpy.context.object.data
         bone = arm.bones.get(bone.name)
@@ -1607,7 +1606,7 @@ class BONE_PT_ue4_helper(bpy.types.Panel):
         c = self.layout.column()
         c.active = not bone.use_deform
         c.prop(props, 'force_export')
-        #self.layout.label('Nothing to see here!')
+        #self.layout.label(text='Nothing to see here!')
 
 class OBJECT_PT_ue4_helper(bpy.types.Panel):
     bl_label = "UE4 Helper Properties"
@@ -1620,14 +1619,14 @@ class OBJECT_PT_ue4_helper(bpy.types.Panel):
         obj = bpy.context.object
         rig_obj = get_current_armature_object()
         #if not rig_obj:
-        #    self.layout.label('No active rig object found!')
+        #    self.layout.label(text='No active rig object found!')
         #    return
         props = obj.ue4h_props
         c = self.layout.column()
         c.active = True if rig_obj else False
         #c.active = not bone.use_deform
         c.prop(props, 'disable_export')
-        #self.layout.label('Nothing to see here!')
+        #self.layout.label(text='Nothing to see here!')
 
 class UE4HelperNewObjectsPanel(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
@@ -1697,7 +1696,22 @@ class SceneUE4HelperProps(bpy.types.PropertyGroup):
     show_action_export_options = BoolProperty(default=False)
 
 def register():
-    bpy.utils.register_module(__name__)
+    #bpy.utils.register_module(__name__)
+    bpy.utils.register_class(ExportRigifyAnim)
+    bpy.utils.register_class(ExportRigifyMesh)
+    bpy.utils.register_class(RotateBones)
+    bpy.utils.register_class(AddHeroTPP)
+    bpy.utils.register_class(ToggleUE4HelperOptions)
+    bpy.utils.register_class(UE4HelperSkeletalPanel)
+    bpy.utils.register_class(BONE_PT_ue4_helper)
+    bpy.utils.register_class(OBJECT_PT_ue4_helper)
+    bpy.utils.register_class(UE4HelperNewObjectsPanel)
+    bpy.utils.register_class(ObjectUE4HelperProps)
+    bpy.utils.register_class(BoneUE4HelperProps)
+    bpy.utils.register_class(ArmatureUE4HelperProps)
+    bpy.utils.register_class(ActionUE4HelperProps)
+    bpy.utils.register_class(SceneUE4HelperProps)
+
     bpy.types.Armature.ue4h_props = PointerProperty(type=ArmatureUE4HelperProps)
     bpy.types.Action.ue4h_props = PointerProperty(type=ActionUE4HelperProps)
     bpy.types.Scene.ue4h_props = PointerProperty(type=SceneUE4HelperProps)
@@ -1705,7 +1719,21 @@ def register():
     bpy.types.Object.ue4h_props = PointerProperty(type=ObjectUE4HelperProps)
 
 def unregister():
-    bpy.utils.unregister_module(__name__)
+    #bpy.utils.unregister_module(__name__)
+    bpy.utils.unregister_class(ExportRigifyAnim)
+    bpy.utils.unregister_class(ExportRigifyMesh)
+    bpy.utils.unregister_class(RotateBones)
+    bpy.utils.unregister_class(AddHeroTPP)
+    bpy.utils.unregister_class(ToggleUE4HelperOptions)
+    bpy.utils.unregister_class(UE4HelperSkeletalPanel)
+    bpy.utils.unregister_class(BONE_PT_ue4_helper)
+    bpy.utils.unregister_class(OBJECT_PT_ue4_helper)
+    bpy.utils.unregister_class(UE4HelperNewObjectsPanel)
+    bpy.utils.unregister_class(ObjectUE4HelperProps)
+    bpy.utils.unregister_class(BoneUE4HelperProps)
+    bpy.utils.unregister_class(ArmatureUE4HelperProps)
+    bpy.utils.unregister_class(ActionUE4HelperProps)
+    bpy.utils.unregister_class(SceneUE4HelperProps)
 
 if __name__ == "__main__":
     register()
