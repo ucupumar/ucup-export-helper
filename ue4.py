@@ -650,13 +650,14 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
         state = SaveState(context)
 
         # Evaluate selected objects to export
-        rig_object, mesh_objects, failed_mesh_objects = evaluate_and_get_source_data(
+        rig_object, mesh_objects, failed_mesh_objects, error_messages = evaluate_and_get_source_data(
                 context.scene, context.selected_objects)
 
         # If valid mesh isn't found
-        if not mesh_objects:
+        #if not mesh_objects:
+        if error_messages != '':
             state.load(context)
-            self.report({'ERROR'}, "FAILED! No objects valid to export! Make sure your armature modifiers are properly set.")
+            self.report({'ERROR'}, error_messages)
             return{'CANCELLED'}
 
         # Scale of the objects

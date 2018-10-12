@@ -17,7 +17,7 @@ class ExportRigifyDAE(bpy.types.Operator, ExportHelper):
 
     @classmethod
     def poll(cls, context):
-        return True
+        return get_current_armature_object()
 
     def execute(self, context):
 
@@ -41,14 +41,27 @@ class ExportRigifyDAE(bpy.types.Operator, ExportHelper):
         #print(export_dae.DaeExporter)
 
         # Evaluate selected objects to export
-        rig_object, mesh_objects, failed_mesh_objects = evaluate_and_get_source_data(
+        rig_object, mesh_objects, failed_mesh_objects, error_messages = evaluate_and_get_source_data(
                 context.scene, context.selected_objects)
 
         # If valid mesh isn't found
-        if not mesh_objects:
+        #if not mesh_objects:
+        if error_messages != '':
             state.load(context)
-            self.report({'ERROR'}, "FAILED! No objects valid to export! Make sure your armature modifiers are properly set.")
+            self.report({'ERROR'}, error_messages)
             return{'CANCELLED'}
+
+        # Remember rig object original matrices and original action
+        quaternions = {}
+        scales = {}
+        locations = {}
+        for pb in rig_object.pose.bones:
+            quaternions[pb.name] = pb.rotation_quaternion.copy()
+            scales[pb.name] = pb.scale.copy()
+            locations[pb.name] = pb.location.copy()
+        if rig_object.animation_data:
+            ori_action = rig_object.animation_data.action
+        else: ori_action = None
 
         # Scale of the objects
         scale = 1
@@ -72,16 +85,31 @@ class ExportRigifyDAE(bpy.types.Operator, ExportHelper):
 
         # To store actions
         actions = []
+        skipped_actions = []
         baked_actions = []
 
         # Deals with animations
-        if scene_props.export_animations and rig_object.animation_data:
+        if scene_props.export_animations:
+
+            # Make sure animation data is exists
+            if not rig_object.animation_data:
+                rig_object.animation_data_create()
 
             # Get valid actions
-            actions = [a for a in bpy.data.actions if not a.name.endswith('-noexp')]
+            for action in bpy.data.actions:
+                if action.name.endswith('-noexp'): continue
+                
+                # Add -noexp to skipped actions
+                if not action.rigify_export_props.enable_export:
+                    action.name += '-noexp'
+                    skipped_actions.append(action)
+                else:
+                    actions.append(action)
 
             # Bake all valid actions
             for action in actions:
+
+                action_props = action.rigify_export_props
 
                 # Set active action
                 rig_object.animation_data.action = action
@@ -95,10 +123,16 @@ class ExportRigifyDAE(bpy.types.Operator, ExportHelper):
                 # Make constraint
                 make_constraint(context, rig_object, export_rig_ob)
 
+                # Frame start and end
+                frame_start = action.frame_range[0]
+                frame_end = action.frame_range[1]
+                if action_props.enable_loop and action_props.enable_skip_last_frame:
+                    frame_end -= 1
+
                 # Bake animations
                 bpy.ops.nla.bake(
-                        frame_start=action.frame_range[0], 
-                        frame_end=action.frame_range[1]-1, 
+                        frame_start=frame_start,
+                        frame_end=frame_end,
                         only_selected=True, 
                         visual_keying=True, 
                         clear_constraints=True, 
@@ -108,6 +142,9 @@ class ExportRigifyDAE(bpy.types.Operator, ExportHelper):
                 # Rename baked action so it will be exported
                 baked_action = export_rig_ob.animation_data.action
                 baked_action.name = action_name
+
+                if not baked_action.name.endswith('-loop') and action_props.enable_loop:
+                    baked_action.name += '-loop'
 
                 # Remember baked actions so it can be removed later
                 baked_actions.append(baked_action)
@@ -126,9 +163,9 @@ class ExportRigifyDAE(bpy.types.Operator, ExportHelper):
                 filepath = self.filepath,
                 object_types = {'ARMATURE', 'MESH'},
                 use_export_selected = True,
-                use_mesh_modifiers = scene_props.appy_modifiers,
+                use_mesh_modifiers = scene_props.apply_modifiers,
                 use_exclude_armature_modifier = True,
-                use_tangent_arrays = True,
+                use_tangent_arrays = scene_props.export_tangent,
                 use_triangles = False,
                 use_copy_images = scene_props.copy_images,
                 use_active_layers = True,
@@ -150,6 +187,7 @@ class ExportRigifyDAE(bpy.types.Operator, ExportHelper):
             bpy.data.actions.remove(action)
 
         # Recover original action names
+        actions.extend(skipped_actions)
         for action in actions:
             action.name = action.name[:-6]
 
@@ -158,6 +196,14 @@ class ExportRigifyDAE(bpy.types.Operator, ExportHelper):
 
         # Load original state
         state.load(context)
+
+        # Recover bone matrices and active action
+        for pb in rig_object.pose.bones:
+            pb.rotation_quaternion = quaternions[pb.name]
+            pb.scale = scales[pb.name]
+            pb.location = locations[pb.name]
+        if rig_object.animation_data:
+            rig_object.animation_data.action = ori_action 
 
         # Failed export objects
         if any(failed_mesh_objects):
@@ -215,7 +261,8 @@ class GodotRigifySkeletonPanel(bpy.types.Panel):
             box = c.box()
             col = box.column(align=True)
             col.prop(scene_props, 'export_animations')
-            col.prop(scene_props, 'appy_modifiers')
+            col.prop(scene_props, 'apply_modifiers')
+            col.prop(scene_props, 'export_tangent')
             col.prop(scene_props, 'copy_images')
 
 class SceneGodotRigifyProps(bpy.types.PropertyGroup):
@@ -224,8 +271,11 @@ class SceneGodotRigifyProps(bpy.types.PropertyGroup):
     export_animations = BoolProperty(default=True, 
             name='Export Animations', description='Export all animations, except whose name ends  with -noexp')
 
-    appy_modifiers = BoolProperty(default=True, 
+    apply_modifiers = BoolProperty(default=True, 
             name='Apply Modifiers', description='Apply all modifiers')
+
+    export_tangent = BoolProperty(default=False, 
+            name='Export Tangent', description="Export Tangent and Binormal arrays (for normalmapping)")
 
     copy_images = BoolProperty(default=False, 
             name='Copy Images', description="Copy Images (create images/ subfolder)")

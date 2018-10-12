@@ -11,7 +11,7 @@ class SaveState():
         if context.object.animation_data:
             self.action = context.object.animation_data.action
         else: self.action = None
-    
+
     def load(self, context):
         scene = context.scene
         for obj in bpy.data.objects:
@@ -23,7 +23,7 @@ class SaveState():
         scene.frame_start = self.frame_start
         scene.frame_end = self.frame_end
 
-        if self.action:
+        if context.object.animation_data:
             context.object.animation_data.action = self.action
 
 def get_addon_filepath():
@@ -49,10 +49,13 @@ def get_current_armature_object():
         return obj
 
     arm_obj = None
+
+    # Search in modifiers
     for mod in obj.modifiers:
         if mod.type == 'ARMATURE' and mod.object:
             arm_obj = mod.object
             break
+
     return arm_obj
 
 def merge_vg(obj, vg1_name, vg2_name):
@@ -294,20 +297,24 @@ def extract_export_meshes(context, mesh_objects, export_rig_ob, scale):
     # Deselect for safety purpose
     bpy.ops.object.select_all(action='DESELECT')
 
+    # Deals with dupli_group
+    #if dupli_group:
+    #    pass
+
     # Duplicate Meshes
     export_objs = []
     for obj in mesh_objects:
         #print(obj.name)
-        obj.select = True
-        scene.objects.active = obj
+        #obj.select = True
+        #scene.objects.active = obj
 
-        bpy.ops.object.duplicate()
+        #bpy.ops.object.duplicate()
 
-        new_obj = scene.objects.active
+        #new_obj = scene.objects.active
 
-        #new_obj = obj.copy()
-        #new_obj.data = new_obj.data.copy()
-        #scene.objects.link(new_obj)
+        new_obj = obj.copy()
+        new_obj.data = new_obj.data.copy()
+        scene.objects.link(new_obj)
 
         # New objects scaling
         #if new_obj.parent != rig_object:
@@ -315,8 +322,8 @@ def extract_export_meshes(context, mesh_objects, export_rig_ob, scale):
         #    new_obj.scale *= scale
 
         # Select this mesh
-        #new_obj.select = True
-        #scene.objects.active = new_obj
+        new_obj.select = True
+        scene.objects.active = new_obj
 
         # Clear parent
         bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
@@ -392,39 +399,26 @@ def evaluate_and_get_source_data(scene, objects):
     rig_object = None
     mesh_objects = []
     failed_mesh_objects = []
+    error_messages = ''
+    #dupli_group = None
 
     # If only select armature object
     if len(objects) == 1 and objects[0].type == 'ARMATURE':
         rig_object = objects[0]
-        mesh_objects = [o for o in scene.objects if (
-            o.type == 'MESH' and
-            not o.ue4h_props.disable_export and
-            any(mod for mod in o.modifiers if (
-                    mod.type == 'ARMATURE' and 
-                    mod.object == rig_object
-                ))
-            )]
-    else:
+
+    # If rig object still not found
+    if not rig_object:
 
         # Selected armatures
         armature_objs = [o for o in objects if o.type == 'ARMATURE']
 
         # If select more than one armatures
         if len(armature_objs) > 1:
-            return "FAILED! You cannot export more than one armatures"
+            error_messages = "FAILED! You cannot export more than one armatures"
         
         # If select at least one armature
         elif len(armature_objs) == 1:
             rig_object = armature_objs[0]
-
-            # Evaluating mesh to be exported or not
-            for obj in objects:
-                if obj.ue4h_props.disable_export: continue
-                if any([mod for mod in obj.modifiers if (
-                    mod.type == 'ARMATURE' and mod.object == rig_object)]):
-                    mesh_objects.append(obj)
-                elif obj.type == 'MESH':
-                    failed_mesh_objects.append(obj)
 
         # If not select any armatures, search for possible armature
         elif len(armature_objs) == 0:
@@ -438,41 +432,75 @@ def evaluate_and_get_source_data(scene, objects):
 
                 # If object has armature modifier
                 if any(armature_mod):
-                    # This object is legit to export
-                    #mesh_objects.append(obj)
-
                     # Add armature object used to list
                     armature_mod = armature_mod[0]
                     if armature_mod.object not in armature_object_list:
                         armature_object_list.append(armature_mod.object)
-
-                # If object didn't have armature modifier or didn't set armature object,
-                # do not export
-                else:
-                    failed_mesh_objects.append(obj)
                 
             # If no armature found
             if not any(armature_object_list):
-                return "FAILED! No armature found! Make sure have properly set your armature modifier."
+                error_messages = "FAILED! No armature found! Make sure have properly set your armature modifier."
 
             # If more than one armature object found
             elif len(armature_object_list) > 1:
-                return "FAILED! There are more than one armature object variation on selected objects"
+                error_messages = "FAILED! There are more than one armature object variation on selected objects"
 
-            rig_object = armature_object_list[0]
+            else:
+                rig_object = armature_object_list[0]
 
-            # Add other objects using same rig object
-            for obj in scene.objects:
-                if obj.ue4h_props.disable_export: continue
-                for mod in obj.modifiers:
+    ## If rig object still not found, check is rig is linked
+    #if not rig_object:
+
+    #    # Check if selected object has dupli group (linked object to other file)
+    #    dupli_group = [o for o in objects if o.type == 'EMPTY' and o.dupli_group]
+    #    if dupli_group: dupli_group = dupli_group[0]
+
+    #    if dupli_group:
+
+    #        # If dupli group found, search inside dupli_group
+    #        for o in dupli_group.objects:
+    #            if o.type == 'ARMATURE':
+    #                # Search for actual object with linked armature
+    #                rig_object = [ob for ob in scene.objects if ob.data == o.data]
+    #                if rig_object: rig_object = rig_object[0]
+
+    # Get mesh objects that using rig object
+    if rig_object:
+        for o in scene.objects:
+            if o.ue4h_props.disable_export: continue
+
+            # Search for modifier using rig object
+            if o.type == 'MESH':
+                for mod in o.modifiers:
                     if mod.type == 'ARMATURE' and mod.object == rig_object:
-                        mesh_objects.append(obj)
+                        mesh_objects.append(o)
+                        break
+
+            # If object is linked pass dupli_group
+            if o.dupli_group:
+                for ob in o.dupli_group.objects:
+                    print(ob)
+                    for mod in ob.modifiers:
+                        if mod.type == 'ARMATURE' and mod.object and mod.object.data == rig_object.data:
+                            mesh_objects.append(ob)
+                    #if ob.data == rig_object.data:
+                    #    dupli_group = o.dupli_group
+                    #    break
+
+    #if dupli_group:
+    #    for o in dupli_group.objects:
+    #        pass
+
+    # Check failed meshes
+    for o in objects:
+        if o.type == 'MESH' and o not in mesh_objects:
+            failed_mesh_objects.append(o)
     
     # If not found any mesh to be export
-    #if not(mesh_objects):
-    #    return "FAILED! No objects valid to export! Make sure your armature modifiers are properly set."
+    if not(mesh_objects): # and not dupli_group:
+        error_messages = "FAILED! No objects valid to export! Make sure your armature modifiers are properly set."
 
-    return rig_object, mesh_objects, failed_mesh_objects
+    return rig_object, mesh_objects, failed_mesh_objects, error_messages
 
 # Check if using rigify by checking existance of MCH-WGT-hips
 def check_use_rigify(rig):

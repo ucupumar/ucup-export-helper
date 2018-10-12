@@ -10,13 +10,14 @@ bl_info = {
 }
 
 #if "bpy" not in locals():
-from . import common, ue4, godot, hero_tpp
+from . import common, ue4, godot, actions, hero_tpp
 #else:
 if "bpy" in locals():
     import imp
     imp.reload(common)
     imp.reload(ue4)
     imp.reload(godot)
+    imp.reload(actions)
     imp.reload(hero_tpp)
 
 import bpy
@@ -24,11 +25,13 @@ import bpy
 def register():
     ue4.register()
     godot.register()
+    actions.register()
     hero_tpp.register()
 
 def unregister():
     ue4.unregister()
     godot.unregister()
+    actions.unregister()
     hero_tpp.unregister()
 
 if __name__ == "__main__":
