@@ -232,15 +232,16 @@ def make_humanoid_constraint(context, rigify_object, export_rig_object):
     # Deselect all and select the rig
     bpy.ops.object.select_all(action='DESELECT')
     #scene.objects.active = export_rig_object
-    #export_rig_object.select = True
+    #select_set(export_rig_object, True)
+    
 
     # Duplicate export rig as intermediate temporary rig
     temp_ob = export_rig_object.copy()
     temp_ob.data = export_rig_object.data.copy()
     temp_ob.data.name = '__TEMP__'
     scene.objects.link(temp_ob)
-    scene.objects.active = temp_ob
-    temp_ob.select = True
+    set_active(temp_ob)
+    select_set(temp_ob, True)
 
     rigify_object.data.pose_position = 'REST'
 
@@ -284,8 +285,8 @@ def make_humanoid_constraint(context, rigify_object, export_rig_object):
     bpy.ops.object.mode_set(mode='OBJECT')
 
     # Select export rig
-    scene.objects.active = export_rig_object
-    export_rig_object.select = True
+    set_active(export_rig_object)
+    select_set(export_rig_object, True)
 
     bpy.ops.object.mode_set(mode='POSE')
 
@@ -324,8 +325,8 @@ def convert_to_unreal_humanoid(rigify_obj, export_rig_obj, scale, mesh_objects =
 
     # Get ue4 humanoid object matrices
     source_matrix = {}
-    scene.objects.active = source_obj
-    source_obj.select = True
+    set_active(source_obj)
+    select_set(source_obj, True)
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     bpy.ops.object.mode_set(mode='EDIT')
     for eb in source_arm.edit_bones:
@@ -347,7 +348,7 @@ def convert_to_unreal_humanoid(rigify_obj, export_rig_obj, scale, mesh_objects =
             if vg.name in retarget_dict:
                 vg.name = retarget_dict[vg.name]
 
-    scene.objects.active = export_rig_obj
+    set_active(export_rig_obj)
     bpy.ops.object.mode_set(mode='EDIT')
 
     edit_bones = export_rig_obj.data.edit_bones
@@ -465,7 +466,7 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
     @classmethod
     def poll(cls, context):
         obj = context.object
-        return obj and obj.select and obj.type == 'ARMATURE' and obj.animation_data and obj.animation_data.action
+        return obj and select_get(obj) and obj.type == 'ARMATURE' and obj.animation_data and obj.animation_data.action
 
     def draw(self, context):
         layout = self.layout
@@ -554,8 +555,8 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
 
         # Select only export rig
         bpy.ops.object.select_all(action='DESELECT')
-        export_rig_ob.select = True
-        scene.objects.active = export_rig_ob
+        select_set(export_rig_ob, True)
+        set_active(export_rig_ob)
 
         #return {'FINISHED'}
 
@@ -691,9 +692,9 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
             bpy.ops.object.mode_set(mode='OBJECT')
 
         # Select export objects
-        export_rig_ob.select = True
+        select_set(export_rig_ob, True)
         for obj in export_mesh_objs:
-            obj.select = True
+            select_set(obj, True)
 
         # Retarget bone name and vertex groups (RIGIFY ONLY)
         if use_rigify:
@@ -801,7 +802,7 @@ class RotateBones(bpy.types.Operator):
 
         # Get source object matrices
         source_matrix = {}
-        scene.objects.active = source_obj
+        set_active(source_obj)
         bpy.ops.object.mode_set(mode='EDIT')
         for eb in source_arm.edit_bones:
             source_matrix[eb.name] = eb.matrix
@@ -810,7 +811,7 @@ class RotateBones(bpy.types.Operator):
         #print()
 
         # Go to target_obj
-        scene.objects.active = target_obj
+        set_active(target_obj)
         bpy.ops.object.mode_set(mode='EDIT')
 
         for eb in target_arm.edit_bones:
@@ -863,7 +864,7 @@ class RotateBones(bpy.types.Operator):
         bpy.data.armatures.remove(source_arm, True)
 
         # Recover
-        scene.objects.active = scene.objects.get(obj.name)
+        set_active(scene.objects.get(obj.name))
         bpy.ops.object.mode_set(mode=ori_mode)
         for i, l in enumerate(ori_layers):
             scene.layers[i] = l
@@ -895,7 +896,7 @@ class ToggleUE4HelperOptions(bpy.types.Operator):
 
 class UE4HelperSkeletalPanel(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
-    bl_region_type = "TOOLS"
+    bl_region_type = "UI"
     #bl_context = "objectmode"
     bl_label = "UE4 Skeletal"
     bl_category = "UE4 Helper"
@@ -912,7 +913,8 @@ class UE4HelperSkeletalPanel(bpy.types.Panel):
         r = c.row(align=True)
         r.operator('export_mesh.rigify_fbx', text='Export Skeletal Mesh', icon='MOD_ARMATURE')
         if scene_props.show_rig_export_options: r.alert = True
-        r.operator('scene.toggle_ue4_helper_options', text='', icon='SCRIPTWIN').prop = 'show_rig_export_options'
+        icon = 'PREFERENCES' if is_greater_than_280() else 'SCRIPTWIN'
+        r.operator('scene.toggle_ue4_helper_options', text='', icon=icon).prop = 'show_rig_export_options'
 
         if scene_props.show_rig_export_options:
             box = c.box()
@@ -940,7 +942,8 @@ class UE4HelperSkeletalPanel(bpy.types.Panel):
         #r.operator("export_anim.rigify_fbx", text="Export current action", icon='ACTION_TWEAK')
         r.operator("export_anim.rigify_fbx", text="Export current action", icon='ACTION')
         if scene_props.show_action_export_options: r.alert = True
-        r.operator('scene.toggle_ue4_helper_options', text='', icon='SCRIPTWIN').prop = 'show_action_export_options'
+        icon = 'PREFERENCES' if is_greater_than_280() else 'SCRIPTWIN'
+        r.operator('scene.toggle_ue4_helper_options', text='', icon=icon).prop = 'show_action_export_options'
         if scene_props.show_action_export_options:
             box = c.box()
             if not rig_obj:

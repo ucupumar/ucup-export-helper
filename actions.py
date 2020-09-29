@@ -30,7 +30,7 @@ class YDeselectAction(bpy.types.Operator):
 
 class YRigifyExportActionPanel(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
-    bl_region_type = "TOOLS"
+    bl_region_type = "UI"
     #bl_context = "objectmode"
     bl_label = "Action Manager"
     bl_category = "UE4 Helper"

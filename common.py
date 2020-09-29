@@ -1,5 +1,52 @@
 import bpy, os
 
+def versiontuple(v):
+    return tuple(map(int, (v.split("."))))
+
+def is_greater_than_280():
+    ver = bpy.app.version_string[:4]
+    if versiontuple(ver) >= versiontuple('2.80'):
+        return True
+    else: return False
+
+def link_object(scene, obj):
+    if is_greater_than_280():
+        scene.collection.objects.link(obj)
+    else: scene.objects.link(obj)
+
+def select_get(obj):
+    if is_greater_than_280():
+        return obj.select_get()
+    return obj.select
+
+def select_set(obj, val):
+    if is_greater_than_280():
+        obj.select_set(val)
+    else: obj.select = val
+
+def set_active(obj):
+    if is_greater_than_280():
+        bpy.context.view_layer.objects.active = obj
+    else: bpy.context.scene.objects.active = obj
+
+def cursor_location_get():
+    if is_greater_than_280():
+        return bpy.context.scene.cursor.location
+    return bpy.context.scene.cursor_location
+
+def get_instance_collection(obj):
+    if is_greater_than_280():
+        return obj.instance_collection
+    return obj.dupli_group
+
+def get_set_collection(collection_name, parent_collection=None):
+    if collection_name in bpy.data.collections: # Does the collection already exist?
+        return bpy.data.collections[collection_name]
+    else:
+        new_collection = bpy.data.collections.new(collection_name)
+        if parent_collection: parent_collection.children.link(new_collection) # Add the new collection under a parent
+        return new_collection
+
 class SaveState():
     def __init__(self, context):
         self.active = context.object
@@ -16,9 +63,10 @@ class SaveState():
         scene = context.scene
         for obj in bpy.data.objects:
             if obj in self.select:
-                obj.select = True
-            else: obj.select = False
-        scene.objects.active = self.active
+                select_set(obj, True)
+            else: 
+                select_set(obj, False)
+        set_active(self.active)
         bpy.ops.object.mode_set(mode=self.mode)
         scene.frame_start = self.frame_start
         scene.frame_end = self.frame_end
@@ -87,8 +135,8 @@ def make_root_constraint(context, rigify_object, export_rig_object):
     # Goto object mode, deselect all and select the rig
     bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.object.select_all(action='DESELECT')
-    scene.objects.active = export_rig_object
-    export_rig_object.select = True
+    set_active(export_rig_object)
+    select_set(export_rig_object, True)
 
     # Make rigify at rest pose
     rigify_object.data.pose_position = 'REST'
@@ -110,8 +158,8 @@ def make_constraint(context, rig_object, export_rig_object):
 
     # Deselect all and select the rig
     bpy.ops.object.select_all(action='DESELECT')
-    context.scene.objects.active = export_rig_object
-    export_rig_object.select = True
+    set_active(export_rig_object)
+    select_set(export_rig_object, True)
 
     # Go to armature pose mode
     bpy.ops.object.mode_set(mode='POSE')
@@ -183,15 +231,17 @@ def extract_export_rig(context, source_object, scale, use_rigify=False):
     export_rig_ob.scale *= scale
     export_rig_ob.name = 'root'
     export_rig = export_rig_ob.data
-    scene.objects.link(export_rig_ob)
+    link_object(scene, export_rig_ob)
 
     # Show x-ray for debugging
-    export_rig_ob.show_x_ray = True
+    if is_greater_than_280():
+        export_rig_ob.show_in_front = True
+    else: export_rig_ob.show_x_ray = True
 
     # Deselect all and select the export rig
     bpy.ops.object.select_all(action='DESELECT')
-    scene.objects.active = export_rig_ob
-    export_rig_ob.select = True
+    set_active(export_rig_ob)
+    select_set(export_rig_ob, True)
 
     # Go to armature edit mode
     bpy.ops.object.mode_set(mode='EDIT')
@@ -305,7 +355,7 @@ def extract_export_meshes(context, mesh_objects, export_rig_ob, scale):
     export_objs = []
     for obj in mesh_objects:
         #print(obj.name)
-        #obj.select = True
+        #select_set(obj, True)
         #scene.objects.active = obj
 
         #bpy.ops.object.duplicate()
@@ -314,7 +364,7 @@ def extract_export_meshes(context, mesh_objects, export_rig_ob, scale):
 
         new_obj = obj.copy()
         new_obj.data = new_obj.data.copy()
-        scene.objects.link(new_obj)
+        link_object(scene, new_obj)
 
         # New objects scaling
         #if new_obj.parent != rig_object:
@@ -322,8 +372,8 @@ def extract_export_meshes(context, mesh_objects, export_rig_ob, scale):
         #    new_obj.scale *= scale
 
         # Select this mesh
-        new_obj.select = True
-        scene.objects.active = new_obj
+        select_set(new_obj, True)
+        set_active(new_obj)
 
         # Clear parent
         bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
@@ -343,8 +393,8 @@ def extract_export_meshes(context, mesh_objects, export_rig_ob, scale):
         mod_armature = [mod for mod in new_obj.modifiers if mod.type == 'ARMATURE'][0]
         mod_armature.object = export_rig_ob
 
-        #obj.select = False
-        new_obj.select = False
+        select_set(obj, False)
+        select_set(new_obj, False)
 
     # Apply transform to exported rig and mesh
     #bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
@@ -372,7 +422,7 @@ def unparent_ik_related_bones(use_humanoid_name, rigify_obj, export_rig_obj):
     # Set to object mode
     bpy.ops.object.mode_set(mode='OBJECT')
 
-    scene.objects.active = export_rig_obj
+    set_active(export_rig_obj)
 
     # Set to edit mode
     bpy.ops.object.mode_set(mode='EDIT')
@@ -477,8 +527,9 @@ def evaluate_and_get_source_data(scene, objects):
                         break
 
             # If object is linked pass dupli_group
-            if o.dupli_group:
-                for ob in o.dupli_group.objects:
+            icol = get_instance_collection(o)
+            if icol:
+                for ob in icol.objects:
                     print(ob)
                     for mod in ob.modifiers:
                         if mod.type == 'ARMATURE' and mod.object and mod.object.data == rig_object.data:
@@ -512,8 +563,8 @@ def move_root(scene, obj):
 
     # Deselect all and select the rig
     bpy.ops.object.select_all(action='DESELECT')
-    scene.objects.active = obj
-    obj.select = True
+    set_active(obj)
+    select_set(obj, True)
 
     # Bake first
     bpy.ops.nla.bake(frame_start=scene.frame_start, 
@@ -528,8 +579,8 @@ def move_root(scene, obj):
     # Duplicate export rig
     temp_ob = obj.copy()
     temp_ob.data = obj.data.copy()
-    scene.objects.link(temp_ob)
-    temp_ob.select = False
+    link_object(scene, temp_ob)
+    select_set(temp_ob, False)
 
     # Go to pose mode
     bpy.ops.object.mode_set(mode='POSE')
@@ -565,14 +616,14 @@ def move_root(scene, obj):
     bpy.ops.object.mode_set(mode='OBJECT')
 
     # Select temp object
-    scene.objects.active = temp_ob
-    obj.select = False
-    temp_ob.select = True
+    set_active(temp_ob)
+    select_set(obj, False)
+    select_set(temp_ob, True)
 
     # Delete temp object
     bpy.ops.object.delete()
 
     # Select back original object
-    scene.objects.active = obj
-    obj.select = True
+    set_active(obj)
+    select_set(obj, True)
 

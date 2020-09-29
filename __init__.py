@@ -2,16 +2,13 @@ bl_info = {
     "name": "Unreal Engine 4 Export Helper",
     "author": "Yusuf Umar",
     "version": (0, 0, 0),
-    "blender": (2, 79, 0),
+    "blender": (2, 80, 0),
     "location": "View 3D > Tool Shelf > UE4 Helper",
     "description": "Tool to help exporting something to UE4 less pain in the a**",
     "wiki_url": "http://twitter.com/ucupumar",
     "category": "Import-Export",
 }
 
-#if "bpy" not in locals():
-from . import common, ue4, godot, actions, hero_tpp
-#else:
 if "bpy" in locals():
     import imp
     imp.reload(common)
@@ -19,6 +16,8 @@ if "bpy" in locals():
     imp.reload(godot)
     imp.reload(actions)
     imp.reload(hero_tpp)
+else:
+    from . import common, ue4, godot, actions, hero_tpp
 
 import bpy
 

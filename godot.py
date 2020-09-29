@@ -23,7 +23,7 @@ class ExportRigifyDAE(bpy.types.Operator, ExportHelper):
 
         scene_props = context.scene.gr_props
 
-        if not hasattr(bpy.types, "EXPORT_SCENE_OT_dae"):
+        if not is_greater_than_280() and not hasattr(bpy.types, "EXPORT_SCENE_OT_dae"):
             self.report({'ERROR'}, "Better Collada addon need to be installed")
             return {'CANCELLED'}
 
@@ -80,8 +80,8 @@ class ExportRigifyDAE(bpy.types.Operator, ExportHelper):
             bpy.ops.object.mode_set(mode='OBJECT')
 
         # Select rig export object
-        context.scene.objects.active = export_rig_ob
-        export_rig_ob.select = True
+        set_active(export_rig_ob)
+        select_set(export_rig_ob, True)
 
         # To store actions
         actions = []
@@ -154,30 +154,35 @@ class ExportRigifyDAE(bpy.types.Operator, ExportHelper):
 
         # Select export objects
         for obj in export_mesh_objs:
-            obj.select = True
+            select_set(obj, True)
 
         #return {'FINISHED'}
 
         ## EXPORT!
-        bpy.ops.export_scene.dae(
-                filepath = self.filepath,
-                object_types = {'ARMATURE', 'MESH'},
-                use_export_selected = True,
-                use_mesh_modifiers = scene_props.apply_modifiers,
-                use_exclude_armature_modifier = True,
-                use_tangent_arrays = scene_props.export_tangent,
-                use_triangles = False,
-                use_copy_images = scene_props.copy_images,
-                use_active_layers = True,
-                use_exclude_ctrl_bones = False,
-                use_anim = scene_props.export_animations,
-                use_anim_action_all = True,
-                use_anim_skip_noexp = True,
-                use_anim_optimize = True,
-                use_shape_key_export = False,
-                anim_optimize_precision = 6.0,
-                use_metadata = True
-                )
+        if is_greater_than_280():
+            # Need to export in GLTF 2.0, but it's rather pointless because it's already fully compatible with Rigify
+            # So this operator still does nothing in Blender 2.80+
+            pass
+        else:
+            bpy.ops.export_scene.dae(
+                    filepath = self.filepath,
+                    object_types = {'ARMATURE', 'MESH'},
+                    use_export_selected = True,
+                    use_mesh_modifiers = scene_props.apply_modifiers,
+                    use_exclude_armature_modifier = True,
+                    use_tangent_arrays = scene_props.export_tangent,
+                    use_triangles = False,
+                    use_copy_images = scene_props.copy_images,
+                    use_active_layers = True,
+                    use_exclude_ctrl_bones = False,
+                    use_anim = scene_props.export_animations,
+                    use_anim_action_all = True,
+                    use_anim_skip_noexp = True,
+                    use_anim_optimize = True,
+                    use_shape_key_export = False,
+                    anim_optimize_precision = 6.0,
+                    use_metadata = True
+                    )
 
         # Delete exported object
         bpy.ops.object.delete()
@@ -242,7 +247,7 @@ class ToggleGodotRigifyOptions(bpy.types.Operator):
 
 class GodotRigifySkeletonPanel(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
-    bl_region_type = "TOOLS"
+    bl_region_type = "UI"
     #bl_context = "objectmode"
     bl_label = "Godot Skeleton"
     bl_category = "UE4 Helper"
@@ -255,7 +260,8 @@ class GodotRigifySkeletonPanel(bpy.types.Panel):
         r.operator('export_mesh.rigify_dae', text='Export Skeleton Mesh', icon='MOD_ARMATURE')
 
         if scene_props.show_rig_export_options: r.alert = True
-        r.operator('scene.toggle_godot_rigify_options', text='', icon='SCRIPTWIN').prop = 'show_rig_export_options'
+        icon = 'PREFERENCES' if is_greater_than_280() else 'SCRIPTWIN'
+        r.operator('scene.toggle_godot_rigify_options', text='', icon=icon).prop = 'show_rig_export_options'
 
         if scene_props.show_rig_export_options:
             box = c.box()

@@ -1,6 +1,8 @@
 import bpy
 from .common import *
 
+WIDGET_COLLECTION_NAME = 'HeroTPPWidgets'
+
 def load_rigify_script():
 
     filepath = get_addon_filepath() + 'lib.blend'
@@ -51,10 +53,24 @@ def load_ue4_hero_tpp():
     rig_obj = [obj for obj in bpy.data.objects if obj.name not in existed_objs and obj.name.startswith('HeroTPP_rig')][0]
     mesh_obj = [obj for obj in bpy.data.objects if obj.name not in existed_objs and obj.name.startswith('HeroTPP')][0]
 
-    for wgt_obj in wgt_objs:
-        wgt_obj.layers[19] = True
-        for i in range(19):
-            wgt_obj.layers[i] = False
+    if is_greater_than_280():
+        scene  = bpy.context.scene
+        col = get_set_collection(WIDGET_COLLECTION_NAME, scene.collection)
+        #col.hide_viewport = True
+        #col.hide_render = True
+        for wgt_obj in wgt_objs:
+            ori_col = wgt_obj.users_collection
+            if ori_col: ori_col[0].objects.unlink(wgt_obj)
+            col.objects.link(wgt_obj)
+        
+        # Exclude widget collections
+        col = bpy.context.view_layer.layer_collection.children.get(WIDGET_COLLECTION_NAME)
+        col.exclude = True
+    else:
+        for wgt_obj in wgt_objs:
+            wgt_obj.layers[19] = True
+            for i in range(19):
+                wgt_obj.layers[i] = False
 
     script = load_rigify_script()
     exec(script.as_string(), {})
@@ -74,14 +90,16 @@ class AddHeroTPP(bpy.types.Operator):
     def execute(self, context):
         scene = context.scene
         rig_obj, mesh_obj = load_ue4_hero_tpp()
-        scene.objects.active = rig_obj
-        rig_obj.location = scene.cursor_location.copy()
-        mesh_obj.select = False
+        #scene.objects.active = rig_obj
+        set_active(rig_obj)
+        #rig_obj.location = scene.cursor_location.copy()
+        rig_obj.location = cursor_location_get().copy()
+        select_set(mesh_obj, False)
         return {'FINISHED'}
 
 class UE4HelperNewObjectsPanel(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
-    bl_region_type = "TOOLS"
+    bl_region_type = "UI"
     #bl_context = "objectmode"
     bl_label = "Add New Objects"
     bl_category = "UE4 Helper"
