@@ -97,7 +97,7 @@ class AddHeroTPP(bpy.types.Operator):
         select_set(mesh_obj, False)
         return {'FINISHED'}
 
-class UE4HelperNewObjectsPanel(bpy.types.Panel):
+class UE4HELPER_PT_NewObjectsPanel(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     #bl_context = "objectmode"
@@ -110,8 +110,8 @@ class UE4HelperNewObjectsPanel(bpy.types.Panel):
 
 def register():
     bpy.utils.register_class(AddHeroTPP)
-    bpy.utils.register_class(UE4HelperNewObjectsPanel)
+    bpy.utils.register_class(UE4HELPER_PT_NewObjectsPanel)
 
 def unregister():
     bpy.utils.unregister_class(AddHeroTPP)
-    bpy.utils.unregister_class(UE4HelperNewObjectsPanel)
+    bpy.utils.unregister_class(UE4HELPER_PT_NewObjectsPanel)

@@ -1,13 +1,9 @@
 import bpy, os
 
-def versiontuple(v):
-    return tuple(map(int, (v.split("."))))
-
 def is_greater_than_280():
-    ver = bpy.app.version_string[:4]
-    if versiontuple(ver) >= versiontuple('2.80'):
+    if bpy.app.version >= (2, 80, 0):
         return True
-    else: return False
+    return False
 
 def link_object(scene, obj):
     if is_greater_than_280():
@@ -75,19 +71,7 @@ class SaveState():
             context.object.animation_data.action = self.action
 
 def get_addon_filepath():
-
-    root = bpy.utils.script_path_user()
-    sep = os.sep
-
-    # get addons folder
-    filepath = root + sep + "addons"
-
-    # Dealing with two possible name for addon folder
-    dirs = next(os.walk(filepath))[1]
-    folder = [x for x in dirs if x == 'blender-ue4-tools' or x == 'blender-ue4-tools-master'][0]
-
-    # Data necessary are in lib.blend
-    return filepath + sep + folder + sep
+    return os.path.dirname(bpy.path.abspath(__file__)) + os.sep
 
 def get_current_armature_object():
     obj = bpy.context.object

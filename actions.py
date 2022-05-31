@@ -28,7 +28,7 @@ class YDeselectAction(bpy.types.Operator):
 
         return {'FINISHED'}
 
-class YRigifyExportActionPanel(bpy.types.Panel):
+class UE4HELPER_PT_RigifyExportActionPanel(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     #bl_context = "objectmode"
@@ -145,36 +145,36 @@ def update_action(self, context):
         #print(bone_names)
 
 class YSceneRigifyExportActionProps(bpy.types.PropertyGroup):
-    sync_bone_layers = BoolProperty(
+    sync_bone_layers : BoolProperty(
             name = 'Sync Bone Layers',
             description = 'Sync bone layers when active action changes',
             default = False
             )
 
-    sync_frames = BoolProperty(
+    sync_frames : BoolProperty(
             name = 'Sync Frames',
             description = 'Sync frame start and end when active action changes',
             default = False
             )
 
 class YWMRigifyExportActionProps(bpy.types.PropertyGroup):
-    active_action = IntProperty(default=0, update=update_action)
+    active_action : IntProperty(default=0, update=update_action)
 
 class YActionRigifyExportActionProps(bpy.types.PropertyGroup):
 
-    enable_export = BoolProperty(
+    enable_export : BoolProperty(
             name = 'Enable Export',
             description = 'Export this action (only works on Godot for now)',
             default = True
             )
 
-    enable_loop = BoolProperty(
+    enable_loop : BoolProperty(
             name = 'Enable Loop',
             description = 'Enable animation loop (only works on Godot for now)',
             default = False,
             update=update_frame_range)
 
-    enable_skip_last_frame = BoolProperty(
+    enable_skip_last_frame : BoolProperty(
             name = 'Enable Skip',
             description = 'Enable skip the last frame (only works on Godot for now)',
             default = True,
@@ -182,7 +182,7 @@ class YActionRigifyExportActionProps(bpy.types.PropertyGroup):
 
 def register():
     bpy.utils.register_class(YDeselectAction)
-    bpy.utils.register_class(YRigifyExportActionPanel)
+    bpy.utils.register_class(UE4HELPER_PT_RigifyExportActionPanel)
     bpy.utils.register_class(YSceneRigifyExportActionProps)
     bpy.utils.register_class(YWMRigifyExportActionProps)
     bpy.utils.register_class(YActionRigifyExportActionProps)
@@ -194,7 +194,7 @@ def register():
 
 def unregister():
     bpy.utils.unregister_class(YDeselectAction)
-    bpy.utils.unregister_class(YRigifyExportActionPanel)
+    bpy.utils.unregister_class(UE4HELPER_PT_RigifyExportActionPanel)
     bpy.utils.unregister_class(YSceneRigifyExportActionProps)
     bpy.utils.unregister_class(YWMRigifyExportActionProps)
     bpy.utils.unregister_class(YActionRigifyExportActionProps)

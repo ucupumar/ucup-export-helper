@@ -13,7 +13,7 @@ class ExportRigifyDAE(bpy.types.Operator, ExportHelper):
     bl_description = "Export rigify mesh as Godot skeleton DAE file"
     bl_options = {'REGISTER', 'UNDO'}
     filename_ext = ".dae"
-    filter_glob = StringProperty(default="*.dae", options={'HIDDEN'})
+    filter_glob : StringProperty(default="*.dae", options={'HIDDEN'})
 
     @classmethod
     def poll(cls, context):
@@ -228,7 +228,7 @@ class ToggleGodotRigifyOptions(bpy.types.Operator):
     bl_description = "Toggle Godot Rigify Export Options"
     #bl_options = {'REGISTER', 'UNDO'}
 
-    prop = StringProperty(default='show_rig_export_options')
+    prop : StringProperty(default='show_rig_export_options')
 
     @classmethod
     def poll(cls, context):
@@ -245,7 +245,7 @@ class ToggleGodotRigifyOptions(bpy.types.Operator):
 
         return {'FINISHED'}
 
-class GodotRigifySkeletonPanel(bpy.types.Panel):
+class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     #bl_context = "objectmode"
@@ -272,24 +272,24 @@ class GodotRigifySkeletonPanel(bpy.types.Panel):
             col.prop(scene_props, 'copy_images')
 
 class SceneGodotRigifyProps(bpy.types.PropertyGroup):
-    show_rig_export_options = BoolProperty(default=False)
+    show_rig_export_options : BoolProperty(default=False)
 
-    export_animations = BoolProperty(default=True, 
+    export_animations : BoolProperty(default=True, 
             name='Export Animations', description='Export all animations, except whose name ends  with -noexp')
 
-    apply_modifiers = BoolProperty(default=True, 
+    apply_modifiers : BoolProperty(default=True, 
             name='Apply Modifiers', description='Apply all modifiers')
 
-    export_tangent = BoolProperty(default=False, 
+    export_tangent : BoolProperty(default=False, 
             name='Export Tangent', description="Export Tangent and Binormal arrays (for normalmapping)")
 
-    copy_images = BoolProperty(default=False, 
+    copy_images : BoolProperty(default=False, 
             name='Copy Images', description="Copy Images (create images/ subfolder)")
 
 def register():
     bpy.utils.register_class(ExportRigifyDAE)
     bpy.utils.register_class(ToggleGodotRigifyOptions)
-    bpy.utils.register_class(GodotRigifySkeletonPanel)
+    bpy.utils.register_class(GODOTHELPER_PT_RigifySkeletonPanel)
     bpy.utils.register_class(SceneGodotRigifyProps)
 
     bpy.types.Scene.gr_props = PointerProperty(type=SceneGodotRigifyProps)
@@ -297,5 +297,5 @@ def register():
 def unregister():
     bpy.utils.unregister_class(ExportRigifyDAE)
     bpy.utils.unregister_class(ToggleGodotRigifyOptions)
-    bpy.utils.unregister_class(GodotRigifySkeletonPanel)
+    bpy.utils.unregister_class(GODOTHELPER_PT_RigifySkeletonPanel)
     bpy.utils.unregister_class(SceneGodotRigifyProps)

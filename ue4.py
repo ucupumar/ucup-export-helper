@@ -461,7 +461,7 @@ class ExportRigifyAnim(bpy.types.Operator, ExportHelper): #, IOFBXOrientationHel
     bl_description = "Export active action as FBX file"
     bl_options = {'REGISTER', 'UNDO'}
     filename_ext = ".fbx"
-    filter_glob = StringProperty(default="*.fbx", options={'HIDDEN'})
+    filter_glob : StringProperty(default="*.fbx", options={'HIDDEN'})
 
     @classmethod
     def poll(cls, context):
@@ -616,7 +616,7 @@ class ExportRigifyMesh(bpy.types.Operator, ExportHelper):
     bl_description = "Export rigify mesh as skeletal mesh FBX file"
     bl_options = {'REGISTER', 'UNDO'}
     filename_ext = ".fbx"
-    filter_glob = StringProperty(default="*.fbx", options={'HIDDEN'})
+    filter_glob : StringProperty(default="*.fbx", options={'HIDDEN'})
 
     @classmethod
     def poll(cls, context):
@@ -877,7 +877,7 @@ class ToggleUE4HelperOptions(bpy.types.Operator):
     bl_description = "Toggle UE4 Helper Options"
     #bl_options = {'REGISTER', 'UNDO'}
 
-    prop = StringProperty(default='show_rig_export_options')
+    prop : StringProperty(default='show_rig_export_options')
 
     @classmethod
     def poll(cls, context):
@@ -894,7 +894,7 @@ class ToggleUE4HelperOptions(bpy.types.Operator):
 
         return {'FINISHED'}
 
-class UE4HelperSkeletalPanel(bpy.types.Panel):
+class UE4HELPER_PT_SkeletalPanel(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     #bl_context = "objectmode"
@@ -1005,41 +1005,41 @@ class OBJECT_PT_ue4_helper(bpy.types.Panel):
         #self.layout.label(text='Nothing to see here!')
 
 class ObjectUE4HelperProps(bpy.types.PropertyGroup):
-    disable_export = BoolProperty(
+    disable_export : BoolProperty(
             name="Disable Export Object",
             description = "Disable export object even if using exported armature in its modifier",
             default=False,
             )
 
 class BoneUE4HelperProps(bpy.types.PropertyGroup):
-    force_export = BoolProperty(
+    force_export : BoolProperty(
             name="Force Export Bone",
             description = "Force export bone even if not using deform option",
             default=False,
             )
 
 class ArmatureUE4HelperProps(bpy.types.PropertyGroup):
-    global_scale = FloatProperty(
+    global_scale : FloatProperty(
             name="Scale",
             description = "Scale of objects multplied by 100 (Unreal default)",
             min=0.001, max=1000.0,
             default=1.0,
             )
 
-    use_humanoid_name = BoolProperty(
+    use_humanoid_name : BoolProperty(
             name="Use Unreal humanoid bone names",
             description="Use standard unreal humanoid bone name for easy retargeting.\n(Works best using Rigify)", 
             default=True,
             )
 
-    unparent_ik_bones = BoolProperty(
+    unparent_ik_bones : BoolProperty(
             name="Unparent IK related bones",
             description="EXPERIMENTAL! Unparent hand and leg bones so it can be transformed freely.\n(Useful to do squash and stretch without error. Only works with Rigify rig)", 
             default=False,
             )
 
 class ActionUE4HelperProps(bpy.types.PropertyGroup):
-    timeframe = EnumProperty(
+    timeframe : EnumProperty(
             name = "Timeframe of the action",
             description="Option to select meshes to export", 
             items=(
@@ -1050,15 +1050,15 @@ class ActionUE4HelperProps(bpy.types.PropertyGroup):
             default='ACTION',
             )
 
-    #hip_to_root = BoolProperty(
+    #hip_to_root : BoolProperty(
     #        name="Convert Hip XY location to Root location",
     #        description="Useful if you want to use root motion on UE4", 
     #        default=False,
     #        )
 
 class SceneUE4HelperProps(bpy.types.PropertyGroup):
-    show_rig_export_options = BoolProperty(default=False)
-    show_action_export_options = BoolProperty(default=False)
+    show_rig_export_options : BoolProperty(default=False)
+    show_action_export_options : BoolProperty(default=False)
 
 def register():
 
@@ -1069,7 +1069,7 @@ def register():
     bpy.utils.register_class(ToggleUE4HelperOptions)
 
     # Panels
-    bpy.utils.register_class(UE4HelperSkeletalPanel)
+    bpy.utils.register_class(UE4HELPER_PT_SkeletalPanel)
     bpy.utils.register_class(BONE_PT_ue4_helper)
     bpy.utils.register_class(OBJECT_PT_ue4_helper)
 
@@ -1095,7 +1095,7 @@ def unregister():
 
     # Panels
     bpy.utils.unregister_class(ToggleUE4HelperOptions)
-    bpy.utils.unregister_class(UE4HelperSkeletalPanel)
+    bpy.utils.unregister_class(UE4HELPER_PT_SkeletalPanel)
     bpy.utils.unregister_class(BONE_PT_ue4_helper)
     bpy.utils.unregister_class(OBJECT_PT_ue4_helper)
 
