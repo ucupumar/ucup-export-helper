@@ -7,13 +7,13 @@ from bpy_extras.io_utils import (ExportHelper,
                                  ) 
 from .common import *
 
-class ExportRigifyDAE(bpy.types.Operator, ExportHelper):
-    bl_idname = "export_mesh.rigify_dae"
+class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
+    bl_idname = "export_mesh.rigify_gltf"
     bl_label = "Export Godot Skeleton"
     bl_description = "Export rigify mesh as Godot skeleton DAE file"
     bl_options = {'REGISTER', 'UNDO'}
-    filename_ext = ".dae"
-    filter_glob : StringProperty(default="*.dae", options={'HIDDEN'})
+    filename_ext = ".gltf"
+    filter_glob : StringProperty(default="*.gltf", options={'HIDDEN'})
 
     @classmethod
     def poll(cls, context):
@@ -131,8 +131,8 @@ class ExportRigifyDAE(bpy.types.Operator, ExportHelper):
 
                 # Bake animations
                 bpy.ops.nla.bake(
-                        frame_start=frame_start,
-                        frame_end=frame_end,
+                        frame_start=int(frame_start),
+                        frame_end=int(frame_end),
                         only_selected=True, 
                         visual_keying=True, 
                         clear_constraints=True, 
@@ -160,9 +160,56 @@ class ExportRigifyDAE(bpy.types.Operator, ExportHelper):
 
         ## EXPORT!
         if is_greater_than_280():
-            # Need to export in GLTF 2.0, but it's rather pointless because it's already fully compatible with Rigify
-            # So this operator still does nothing in Blender 2.80+
-            pass
+            bpy.ops.export_scene.gltf(
+                    filepath=self.filepath,
+                    #check_existing=True, 
+                    export_format='GLTF_EMBEDDED', 
+                    #ui_tab='GENERAL', 
+                    #export_copyright='', 
+                    export_image_format='AUTO', 
+                    export_texture_dir='', 
+                    export_keep_originals=False, 
+                    export_texcoords=True, 
+                    export_normals=True, 
+                    #export_draco_mesh_compression_enable=False, 
+                    #export_draco_mesh_compression_level=6, 
+                    #export_draco_position_quantization=14, 
+                    #export_draco_normal_quantization=10, 
+                    #export_draco_texcoord_quantization=12, 
+                    #export_draco_color_quantization=10, 
+                    #export_draco_generic_quantization=12, 
+                    export_tangents = scene_props.export_tangent,
+                    export_materials='EXPORT', 
+                    export_colors=True, 
+                    use_mesh_edges=False, 
+                    use_mesh_vertices=False, 
+                    export_cameras=False, 
+                    export_selected=True, 
+                    use_selection=True, 
+                    use_visible=False, 
+                    use_renderable=False, 
+                    use_active_collection=False, 
+                    export_extras=False, 
+                    export_yup=True, 
+                    export_apply = scene_props.apply_modifiers,
+                    export_animations = scene_props.export_animations,
+                    export_frame_range=True, 
+                    export_frame_step=1, 
+                    export_force_sampling=True, 
+                    export_nla_strips=True, 
+                    export_def_bones=False, 
+                    optimize_animation_size=False, 
+                    export_current_frame=False, 
+                    export_skins=True, 
+                    export_all_influences=False, 
+                    export_morph=True, 
+                    export_morph_normal=True, 
+                    export_morph_tangent=False, 
+                    export_lights=False, 
+                    export_displacement=False, 
+                    #will_save_settings=False, 
+                    #filter_glob='*.glb;*.gltf'
+                    )
         else:
             bpy.ops.export_scene.dae(
                     filepath = self.filepath,
@@ -257,7 +304,7 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
 
         c = self.layout.column(align=True)
         r = c.row(align=True)
-        r.operator('export_mesh.rigify_dae', text='Export Skeleton Mesh', icon='MOD_ARMATURE')
+        r.operator('export_mesh.rigify_gltf', text='Export Skeleton Mesh', icon='MOD_ARMATURE')
 
         if scene_props.show_rig_export_options: r.alert = True
         icon = 'PREFERENCES' if is_greater_than_280() else 'SCRIPTWIN'
@@ -287,7 +334,7 @@ class SceneGodotRigifyProps(bpy.types.PropertyGroup):
             name='Copy Images', description="Copy Images (create images/ subfolder)")
 
 def register():
-    bpy.utils.register_class(ExportRigifyDAE)
+    bpy.utils.register_class(ExportRigifyGLTF)
     bpy.utils.register_class(ToggleGodotRigifyOptions)
     bpy.utils.register_class(GODOTHELPER_PT_RigifySkeletonPanel)
     bpy.utils.register_class(SceneGodotRigifyProps)
@@ -295,7 +342,7 @@ def register():
     bpy.types.Scene.gr_props = PointerProperty(type=SceneGodotRigifyProps)
 
 def unregister():
-    bpy.utils.unregister_class(ExportRigifyDAE)
+    bpy.utils.unregister_class(ExportRigifyGLTF)
     bpy.utils.unregister_class(ToggleGodotRigifyOptions)
     bpy.utils.unregister_class(GODOTHELPER_PT_RigifySkeletonPanel)
     bpy.utils.unregister_class(SceneGodotRigifyProps)

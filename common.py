@@ -283,8 +283,8 @@ def extract_export_rig(context, source_object, scale, use_rigify=False):
     export_rig_ob.animation_data_clear()
 
     # Remove rig_id used by rigify rig_ui.py (RIGIFY ONLY)
-    if use_rigify:
-        bpy.ops.wm.properties_remove(data_path = 'active_object.data', property = 'rig_id')
+    #if use_rigify:
+    #    bpy.ops.wm.properties_remove(data_path = 'active_object.data', property = 'rig_id')
 
     # Clear locking bones
     pose_bones = export_rig_ob.pose.bones
