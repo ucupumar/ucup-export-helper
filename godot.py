@@ -88,8 +88,70 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
         skipped_actions = []
         baked_actions = []
 
+        #return {'FINISHED'}
+
         # Deals with animations
         if scene_props.export_animations:
+
+            # Bake all valid actions
+            for action in bpy.data.actions:
+                if not action.rigify_export_props.enable_export: continue
+
+                action_props = action.rigify_export_props
+
+                # Set active action
+                rig_object.animation_data.action = action
+
+                # Remember active action name
+                action_name = action.name
+
+                # Set active action name to use -noexp, so it won't be exported
+                action.name += '-noexp'
+
+                # Make constraint
+                make_constraint(context, rig_object, export_rig_ob)
+
+                # Frame start and end
+                frame_start = int(action.frame_range[0])
+                frame_end = int(action.frame_range[1])
+                if action_props.enable_loop and action_props.enable_skip_last_frame:
+                    frame_end -= 1
+
+                # Bake animations
+                bpy.ops.nla.bake(
+                        frame_start=frame_start,
+                        frame_end=frame_end,
+                        only_selected=True, 
+                        visual_keying=True, 
+                        clear_constraints=True, 
+                        use_current_action=True, 
+                        bake_types={'POSE'})
+
+                # Rename baked action so it will be exported
+                baked_action = export_rig_ob.animation_data.action
+                baked_action.name = action_name
+
+                if not baked_action.name.endswith('-loop') and action_props.enable_loop:
+                    baked_action.name += '-loop'
+
+                # Remember baked actions so it can be removed later
+                baked_actions.append(baked_action)
+
+                # Set active action back to None
+                export_rig_ob.animation_data.action = None
+
+            # Remove already available tracks
+            if len(export_rig_ob.animation_data.nla_tracks) > 0:
+                for track in reversed(export_rig_ob.animation_data.nla_tracks):
+                    export_rig_ob.animation_data.nla_tracks.remove(track)
+
+            # Add baked action to NLA tracks
+            for ba in baked_actions:
+                track = export_rig_ob.animation_data.nla_tracks.new()
+                strip = track.strips.new(ba.name, int(ba.frame_start), ba)
+
+        # NOTE: OLD IMPLEMENTATION
+        if False and scene_props.export_animations:
 
             # Make sure animation data is exists
             if not rig_object.animation_data:
@@ -124,15 +186,15 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                 make_constraint(context, rig_object, export_rig_ob)
 
                 # Frame start and end
-                frame_start = action.frame_range[0]
-                frame_end = action.frame_range[1]
+                frame_start = int(action.frame_range[0])
+                frame_end = int(action.frame_range[1])
                 if action_props.enable_loop and action_props.enable_skip_last_frame:
                     frame_end -= 1
 
                 # Bake animations
                 bpy.ops.nla.bake(
-                        frame_start=int(frame_start),
-                        frame_end=int(frame_end),
+                        frame_start=frame_start,
+                        frame_end=frame_end,
                         only_selected=True, 
                         visual_keying=True, 
                         clear_constraints=True, 
@@ -196,7 +258,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                     export_frame_range=True, 
                     export_frame_step=1, 
                     export_force_sampling=True, 
-                    export_nla_strips=True, 
+                    export_nla_strips = scene_props.export_animations, 
                     export_def_bones=False, 
                     optimize_animation_size=False, 
                     export_current_frame=False, 
@@ -211,6 +273,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                     #filter_glob='*.glb;*.gltf'
                     )
         else:
+            # NOTE: OLD IMPLEMENTATION
             bpy.ops.export_scene.dae(
                     filepath = self.filepath,
                     object_types = {'ARMATURE', 'MESH'},
@@ -239,9 +302,12 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
             bpy.data.actions.remove(action)
 
         # Recover original action names
-        actions.extend(skipped_actions)
-        for action in actions:
-            action.name = action.name[:-6]
+        #actions.extend(skipped_actions)
+        #for action in actions:
+        #    action.name = action.name[:-6]
+        for action in bpy.data.actions:
+            if action.name.endswith('-noexp'):
+                action.name = action.name[:-6]
 
         # Descale original rig
         rig_object.scale /= scale

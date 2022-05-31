@@ -52,7 +52,10 @@ class UE4HELPER_PT_RigifyExportActionPanel(bpy.types.Panel):
         # Check active action
         if obj.animation_data:
             action = obj.animation_data.action
-            if action and action != bpy.data.actions[props.active_action]:
+            if action and (
+                    props.active_action >= len(bpy.data.actions) or
+                    action != bpy.data.actions[props.active_action]
+                    ):
                 index = [i for i,a in enumerate(bpy.data.actions) if a == action][0]
                 props.active_action = index
 
