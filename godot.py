@@ -270,7 +270,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                     export_force_sampling=True, 
                     export_nla_strips = scene_props.export_animations, 
                     export_def_bones=False, 
-                    optimize_animation_size=False, 
+                    optimize_animation_size=True, 
                     export_current_frame=False, 
                     export_skins=True, 
                     export_all_influences=False, 
