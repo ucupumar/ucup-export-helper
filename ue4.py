@@ -899,7 +899,7 @@ class UE4HELPER_PT_SkeletalPanel(bpy.types.Panel):
     bl_region_type = "UI"
     #bl_context = "objectmode"
     bl_label = "UE4 Skeletal"
-    bl_category = "UE4 Helper"
+    bl_category = "Ucup Exporter"
 
     def draw(self, context):
         scene = context.scene

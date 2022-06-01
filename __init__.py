@@ -1,10 +1,10 @@
 bl_info = {
-    "name": "Unreal Engine 4 Export Helper",
+    "name": "Ucup Export Helper",
     "author": "Yusuf Umar",
     "version": (0, 0, 0),
-    "blender": (2, 80, 0),
-    "location": "View 3D > Tool Shelf > UE4 Helper",
-    "description": "Tool to help exporting something to UE4 less pain in the a**",
+    "blender": (3, 1, 0),
+    "location": "View 3D > Tool Shelf > Ucup Exporter",
+    "description": "Tool to help exporting things to Godot",
     "wiki_url": "http://twitter.com/ucupumar",
     "category": "Import-Export",
 }

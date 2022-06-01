@@ -102,7 +102,7 @@ class UE4HELPER_PT_NewObjectsPanel(bpy.types.Panel):
     bl_region_type = "UI"
     #bl_context = "objectmode"
     bl_label = "Add New Objects"
-    bl_category = "UE4 Helper"
+    bl_category = "Ucup Exporter"
 
     def draw(self, context):
         c = self.layout.column(align=True)

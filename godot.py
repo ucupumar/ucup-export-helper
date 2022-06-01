@@ -377,7 +377,7 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
     bl_region_type = "UI"
     #bl_context = "objectmode"
     bl_label = "Godot Skeleton"
-    bl_category = "UE4 Helper"
+    bl_category = "Ucup Exporter"
 
     def draw(self, context):
         scene_props = context.scene.gr_props

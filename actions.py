@@ -33,7 +33,7 @@ class UE4HELPER_PT_RigifyExportActionPanel(bpy.types.Panel):
     bl_region_type = "UI"
     #bl_context = "objectmode"
     bl_label = "Action Manager"
-    bl_category = "UE4 Helper"
+    bl_category = "Ucup Exporter"
 
     @classmethod
     def poll(cls, context):
