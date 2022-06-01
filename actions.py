@@ -211,7 +211,7 @@ class YSceneRigifyExportActionProps(bpy.types.PropertyGroup):
     sync_frames : BoolProperty(
             name = 'Sync Frames',
             description = 'Sync frame start and end when active action changes',
-            default = False
+            default = True
             )
 
     sync_unkeyframed_bones : BoolProperty(
