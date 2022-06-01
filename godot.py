@@ -1,5 +1,6 @@
 import bpy, sys
 from bpy.props import *
+from mathutils import *
 from bpy_extras.io_utils import (ExportHelper,
                                  #orientation_helper_factory,
                                  #path_reference_mode,
@@ -23,9 +24,9 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
 
         scene_props = context.scene.gr_props
 
-        if not is_greater_than_280() and not hasattr(bpy.types, "EXPORT_SCENE_OT_dae"):
-            self.report({'ERROR'}, "Better Collada addon need to be installed")
-            return {'CANCELLED'}
+        #if not is_greater_than_280() and not hasattr(bpy.types, "EXPORT_SCENE_OT_dae"):
+        #    self.report({'ERROR'}, "Better Collada addon need to be installed")
+        #    return {'CANCELLED'}
 
         #print(sys.modules[bpy.types.EXPORT_SCENE_OT_dae.__module__].__file__)
         #print(sys.modules[bpy.types.EXPORT_SCENE_OT_dae.__module__].__path__[0])
@@ -98,6 +99,15 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                 if not action.rigify_export_props.enable_export: continue
 
                 action_props = action.rigify_export_props
+
+                # Reset all bone transformations first
+                for pb in rig_object.pose.bones:
+                    #Set the rotation to 0
+                    pb.rotation_quaternion = Quaternion((0, 0, 0), 0)
+                    #Set the scale to 1
+                    pb.scale = Vector((1, 1, 1))
+                    #Set the location at rest (edit) pose bone position
+                    pb.location = Vector((0, 0, 0))
 
                 # Set active action
                 rig_object.animation_data.action = action

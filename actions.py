@@ -65,6 +65,7 @@ class UE4HELPER_PT_RigifyExportActionPanel(bpy.types.Panel):
         if action:
             col.operator('armature.y_deselect_action', icon='ACTION')
 
+        col.prop(scene_props, 'sync_unkeyframed_bones')
         col.prop(scene_props, 'sync_frames')
         col.prop(scene_props, 'sync_bone_layers')
 
@@ -84,6 +85,10 @@ class ACTION_UL_y_action_lists(bpy.types.UIList):
         rrow.prop(action_props, 'enable_loop', text='', emboss=False, icon='FILE_REFRESH')
 
         rrow = row.row(align=True)
+        rrow.active = action_props.enable_skip_last_frame
+        rrow.prop(item, 'use_fake_user', text='', emboss=False)
+
+        rrow = row.row(align=True)
         rrow.prop(action_props, 'enable_export', text='')
 
 def update_frame_range(self, context):
@@ -100,8 +105,8 @@ def update_frame_range(self, context):
 
     if obj.animation_data.action == action:
         # Set start and end frame
-        scene.frame_start = action.frame_range[0]
-        scene.frame_end = action.frame_range[1]
+        scene.frame_start = int(action.frame_range[0])
+        scene.frame_end = int(action.frame_range[1])
 
         # Skip last frame option
         if action_props.enable_loop and action_props.enable_skip_last_frame:
@@ -114,6 +119,17 @@ def update_action(self, context):
     # Get action
     action = bpy.data.actions[self.active_action]
     action_props = action.rigify_export_props
+
+    # Reset all bone transformations first
+    if scene_props.sync_unkeyframed_bones:
+
+        for pb in obj.pose.bones:
+            #Set the rotation to 0
+            pb.rotation_quaternion = Quaternion((0, 0, 0), 0)
+            #Set the scale to 1
+            pb.scale = Vector((1, 1, 1))
+            #Set the location at rest (edit) pose bone position
+            pb.location = Vector((0, 0, 0))
 
     # Set action
     if not obj.animation_data:
@@ -158,6 +174,12 @@ class YSceneRigifyExportActionProps(bpy.types.PropertyGroup):
             name = 'Sync Frames',
             description = 'Sync frame start and end when active action changes',
             default = False
+            )
+
+    sync_unkeyframed_bones : BoolProperty(
+            name = 'Sync Unkeyframed Bones',
+            description = 'Clear unkeyframed bones when changing action',
+            default = True
             )
 
 class YWMRigifyExportActionProps(bpy.types.PropertyGroup):
