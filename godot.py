@@ -122,9 +122,13 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                 make_constraint(context, rig_object, export_rig_ob)
 
                 # Frame start and end
-                frame_start = int(action.frame_range[0])
-                frame_end = int(action.frame_range[1])
-                if action_props.enable_loop and action_props.enable_skip_last_frame:
+                if action.use_frame_range:
+                    frame_start = int(action.frame_start)
+                    frame_end = int(action.frame_end)
+                else:
+                    frame_start = int(action.frame_range[0])
+                    frame_end = int(action.frame_range[1])
+                if action_props.enable_loop and action_props.enable_skip_last_frame and not action.use_frame_range:
                     frame_end -= 1
 
                 # Bake animations

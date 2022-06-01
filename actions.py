@@ -63,11 +63,37 @@ class UE4HELPER_PT_RigifyExportActionPanel(bpy.types.Panel):
                 "actions", props, "active_action", rows=3, maxrows=5)  
 
         if action:
+            action_props = action.rigify_export_props
+
             col.operator('armature.y_deselect_action', icon='ACTION')
 
-        col.prop(scene_props, 'sync_unkeyframed_bones')
-        col.prop(scene_props, 'sync_frames')
-        col.prop(scene_props, 'sync_bone_layers')
+            col.label(text='Active: ' + action.name, icon='ACTION')
+
+            box = col.box()
+            bcol = box.column()
+
+            bcol.prop(action, 'use_frame_range')
+
+            if action.use_frame_range:
+                brow = bcol.row(align=True)
+                brow.prop(action, 'frame_start')
+                brow.prop(action, 'frame_end')
+
+            bcol.prop(action_props, 'enable_loop')
+
+            if action_props.enable_loop:
+                brow = bcol.row()
+                brow.active = (not action.use_frame_range) # and action_props.enable_loop
+                brow.prop(action_props, 'enable_skip_last_frame')
+
+        col.label(text='Action Manager Settings:', icon='PREFERENCES')
+
+        box = col.box()
+        bcol = box.column()
+
+        bcol.prop(scene_props, 'sync_unkeyframed_bones')
+        bcol.prop(scene_props, 'sync_frames')
+        bcol.prop(scene_props, 'sync_bone_layers')
 
 class ACTION_UL_y_action_lists(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
@@ -75,18 +101,26 @@ class ACTION_UL_y_action_lists(bpy.types.UIList):
         row = layout.row(align=True)
         row.prop(item, 'name', text='', emboss=False, icon='ACTION')
 
-        if action_props.enable_loop:
-            rrow = row.row(align=True)
-            rrow.active = action_props.enable_skip_last_frame
-            rrow.prop(action_props, 'enable_skip_last_frame', text='', emboss=False, icon='FRAME_PREV')
+        rrow = row.row(align=True)
+        rrow.active = item.use_frame_range
+        rrow.prop(item, 'use_frame_range', text='', icon='ACTION_TWEAK')
+
+        #if item.use_frame_range:
+        #    rrow = row.row(align=True)
+        #    rrow.label(text='', icon='ACTION_TWEAK')
+
+        #if action_props.enable_loop and not item.use_frame_range:
+        #    rrow = row.row(align=True)
+        #    rrow.active = action_props.enable_skip_last_frame
+        #    rrow.prop(action_props, 'enable_skip_last_frame', text='', icon='FRAME_PREV')
 
         rrow = row.row(align=True)
         rrow.active = action_props.enable_loop
-        rrow.prop(action_props, 'enable_loop', text='', emboss=False, icon='FILE_REFRESH')
+        rrow.prop(action_props, 'enable_loop', text='', icon='FILE_REFRESH')
 
         rrow = row.row(align=True)
-        rrow.active = action_props.enable_skip_last_frame
         rrow.prop(item, 'use_fake_user', text='', emboss=False)
+        #rrow.prop(item, 'use_fake_user', text='')
 
         rrow = row.row(align=True)
         rrow.prop(action_props, 'enable_export', text='')
@@ -105,8 +139,12 @@ def update_frame_range(self, context):
 
     if obj.animation_data.action == action:
         # Set start and end frame
-        scene.frame_start = int(action.frame_range[0])
-        scene.frame_end = int(action.frame_range[1])
+        if action.use_frame_range:
+            scene.frame_start = int(action.frame_start)
+            scene.frame_end = int(action.frame_end)
+        else:
+            scene.frame_start = int(action.frame_range[0])
+            scene.frame_end = int(action.frame_range[1])
 
         # Skip last frame option
         if action_props.enable_loop and action_props.enable_skip_last_frame:
@@ -200,7 +238,7 @@ class YActionRigifyExportActionProps(bpy.types.PropertyGroup):
             update=update_frame_range)
 
     enable_skip_last_frame : BoolProperty(
-            name = 'Enable Skip',
+            name = 'Enable Skip Last Frame',
             description = 'Enable skip the last frame (only works on Godot for now)',
             default = True,
             update=update_frame_range)
