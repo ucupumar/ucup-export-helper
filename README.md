@@ -1,2 +1,2 @@
-# Blender UE4 Tools
-Blender addons to helps exporting rigify rig to Unreal Engine 4 easier. WARNING! It's unofficial and highly experimental.
+# Ucup Export Helper
+Blender addons to helps exporting various things (mainly rigify models), a little bit easier.
