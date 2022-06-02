@@ -39,7 +39,20 @@ class YRemoveNonTransformativeFrames(bpy.types.Operator):
         return get_current_armature_object()
 
     def execute(self, context):
-        print('Myaaah')
+
+        obj = get_current_armature_object()
+
+        for action in bpy.data.actions:
+            if not action.rigify_export_props.enable_export: continue
+
+            for pb in obj.pose.bones:
+                pass
+
+            for fcurve in action.fcurves:
+                pass
+                #if fcurve.group and fcurve.group.name not in bone_names:
+                #    bone_names.append(fcurve.group.name)
+
         return {'FINISHED'}
 
 class YToggleActionSettings(bpy.types.Operator):
