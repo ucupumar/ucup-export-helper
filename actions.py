@@ -28,6 +28,66 @@ class YDeselectAction(bpy.types.Operator):
 
         return {'FINISHED'}
 
+class YRemoveNonTransformativeFrames(bpy.types.Operator):
+    bl_idname = "armature.y_remove_non_transformative_frames"
+    bl_label = "Remove Non Transformative Frames"
+    bl_description = "Remove non transformative frames on selected actions"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return get_current_armature_object()
+
+    def execute(self, context):
+        print('Myaaah')
+        return {'FINISHED'}
+
+class YToggleActionSettings(bpy.types.Operator):
+    bl_idname = "scene.y_toggle_action_settings"
+    bl_label = "Toggle Action Settings"
+    bl_description = "Toggle action settings"
+    #bl_options = {'REGISTER', 'UNDO'}
+
+    prop : StringProperty(default='show_action_settings')
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        props = context.scene.rigify_export_props
+
+        if self.prop not in dir(props) or not self.prop.startswith('show_'):
+            return {'CANCELLED'}
+
+        cur_value = getattr(props, self.prop)
+        setattr(props, self.prop, not cur_value)
+
+        return {'FINISHED'}
+
+class YToggleActionGlobalSettings(bpy.types.Operator):
+    bl_idname = "scene.y_toggle_action_global_settings"
+    bl_label = "Toggle Action List Global Settings"
+    bl_description = "Toggle action list global settings"
+    #bl_options = {'REGISTER', 'UNDO'}
+
+    prop : StringProperty(default='show_global_settings')
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        props = context.scene.rigify_export_props
+
+        if self.prop not in dir(props) or not self.prop.startswith('show_'):
+            return {'CANCELLED'}
+
+        cur_value = getattr(props, self.prop)
+        setattr(props, self.prop, not cur_value)
+
+        return {'FINISHED'}
+
 class UE4HELPER_PT_RigifyExportActionPanel(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
@@ -45,8 +105,10 @@ class UE4HELPER_PT_RigifyExportActionPanel(bpy.types.Panel):
         scene_props = context.scene.rigify_export_props
         props = context.window_manager.rigify_export_props
 
-        col = self.layout.column()
+        listrow = self.layout.row()
 
+        col = listrow.column()
+        
         action = None
 
         # Check active action
@@ -62,38 +124,70 @@ class UE4HELPER_PT_RigifyExportActionPanel(bpy.types.Panel):
         col.template_list("ACTION_UL_y_action_lists", "", bpy.data,
                 "actions", props, "active_action", rows=3, maxrows=5)  
 
+        col = listrow.column(align=True)
+        col.operator('armature.y_deselect_action', text='', icon='OUTLINER_OB_ARMATURE')
+        col.menu("ACTION_MT_y_action_list_special_menu", text='', icon='DOWNARROW_HLT')
+
+        col = self.layout.column()
+
+        #if action:
+        #col.operator('armature.y_deselect_action', icon='ACTION')
+
+        r = col.row()
+        rr = r.row()
+
+        if scene_props.show_action_settings: rr.alert = True
+        icon = 'PREFERENCES'
+        rr.operator('scene.y_toggle_action_settings', text='', icon=icon).prop = 'show_action_settings'
+
+        #col.label(text='Active: ' + action.name, icon='ACTION')
         if action:
-            action_props = action.rigify_export_props
+            r.label(text='Active Action: ' + action.name)
+        else:
+            r.label(text='Active Action: -')
 
-            col.operator('armature.y_deselect_action', icon='ACTION')
-
-            col.label(text='Active: ' + action.name, icon='ACTION')
+        if scene_props.show_action_settings:
 
             box = col.box()
             bcol = box.column()
 
-            bcol.prop(action, 'use_frame_range')
+            if not action:
+                bcol.label(text='No active action!')
+            else:
+                bcol.prop(action, 'use_frame_range')
 
-            if action.use_frame_range:
-                brow = bcol.row(align=True)
-                brow.prop(action, 'frame_start')
-                brow.prop(action, 'frame_end')
+                if action.use_frame_range:
+                    brow = bcol.row(align=True)
+                    brow.prop(action, 'frame_start')
+                    brow.prop(action, 'frame_end')
 
-            bcol.prop(action_props, 'enable_loop')
+                action_props = action.rigify_export_props
 
-            if action_props.enable_loop:
-                brow = bcol.row()
-                brow.active = (not action.use_frame_range) # and action_props.enable_loop
-                brow.prop(action_props, 'enable_skip_last_frame')
+                bcol.prop(action_props, 'enable_loop')
 
-        col.label(text='Action Manager Settings:', icon='PREFERENCES')
+                if action_props.enable_loop:
+                    brow = bcol.row()
+                    brow.active = (not action.use_frame_range) # and action_props.enable_loop
+                    brow.prop(action_props, 'enable_skip_last_frame')
 
-        box = col.box()
-        bcol = box.column()
+        r = col.row()
+        rr = r.row()
 
-        bcol.prop(scene_props, 'sync_unkeyframed_bones')
-        bcol.prop(scene_props, 'sync_frames')
-        bcol.prop(scene_props, 'sync_bone_layers')
+        if scene_props.show_global_settings: rr.alert = True
+        icon = 'PREFERENCES' # if is_greater_than_280() else 'SCRIPTWIN'
+        rr.operator('scene.y_toggle_action_global_settings', text='', icon=icon).prop = 'show_global_settings'
+
+        #r.label(text='Action Manager Settings:', icon='PREFERENCES')
+        r.label(text='Action Manager Settings:')
+
+        if scene_props.show_global_settings:
+
+            box = col.box()
+            bcol = box.column()
+
+            bcol.prop(scene_props, 'sync_unkeyframed_bones')
+            bcol.prop(scene_props, 'sync_frames')
+            bcol.prop(scene_props, 'sync_bone_layers')
 
 class ACTION_UL_y_action_lists(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
@@ -124,6 +218,18 @@ class ACTION_UL_y_action_lists(bpy.types.UIList):
 
         rrow = row.row(align=True)
         rrow.prop(action_props, 'enable_export', text='')
+
+class YActionListSpecialMenu(bpy.types.Menu):
+    bl_idname = "ACTION_MT_y_action_list_special_menu"
+    bl_label = "Action Special Menu"
+    bl_description = "Action Special Menu"
+
+    @classmethod
+    def poll(cls, context):
+        return get_current_armature_object()
+
+    def draw(self, context):
+        self.layout.operator('armature.y_remove_non_transformative_frames', icon='ACTION')
 
 def update_frame_range(self, context):
     obj =  get_current_armature_object()
@@ -202,6 +308,10 @@ def update_action(self, context):
         #print(bone_names)
 
 class YSceneRigifyExportActionProps(bpy.types.PropertyGroup):
+
+    show_action_settings : BoolProperty(default=True)
+    show_global_settings : BoolProperty(default=False)
+
     sync_bone_layers : BoolProperty(
             name = 'Sync Bone Layers',
             description = 'Sync bone layers when active action changes',
@@ -245,11 +355,15 @@ class YActionRigifyExportActionProps(bpy.types.PropertyGroup):
 
 def register():
     bpy.utils.register_class(YDeselectAction)
+    bpy.utils.register_class(YRemoveNonTransformativeFrames)
+    bpy.utils.register_class(YToggleActionSettings)
+    bpy.utils.register_class(YToggleActionGlobalSettings)
     bpy.utils.register_class(UE4HELPER_PT_RigifyExportActionPanel)
     bpy.utils.register_class(YSceneRigifyExportActionProps)
     bpy.utils.register_class(YWMRigifyExportActionProps)
     bpy.utils.register_class(YActionRigifyExportActionProps)
     bpy.utils.register_class(ACTION_UL_y_action_lists)
+    bpy.utils.register_class(YActionListSpecialMenu)
 
     bpy.types.Scene.rigify_export_props = PointerProperty(type=YSceneRigifyExportActionProps)
     bpy.types.Action.rigify_export_props = PointerProperty(type=YActionRigifyExportActionProps)
@@ -257,8 +371,12 @@ def register():
 
 def unregister():
     bpy.utils.unregister_class(YDeselectAction)
+    bpy.utils.unregister_class(YRemoveNonTransformativeFrames)
+    bpy.utils.unregister_class(YToggleActionSettings)
+    bpy.utils.unregister_class(YToggleActionGlobalSettings)
     bpy.utils.unregister_class(UE4HELPER_PT_RigifyExportActionPanel)
     bpy.utils.unregister_class(YSceneRigifyExportActionProps)
     bpy.utils.unregister_class(YWMRigifyExportActionProps)
     bpy.utils.unregister_class(YActionRigifyExportActionProps)
     bpy.utils.unregister_class(ACTION_UL_y_action_lists)
+    bpy.utils.unregister_class(YActionListSpecialMenu)
