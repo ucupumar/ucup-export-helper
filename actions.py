@@ -31,27 +31,73 @@ class YDeselectAction(bpy.types.Operator):
 class YRemoveNonTransformativeFrames(bpy.types.Operator):
     bl_idname = "armature.y_remove_non_transformative_frames"
     bl_label = "Remove Non Transformative Frames"
-    bl_description = "Remove non transformative frames on selected actions"
+    bl_description = "Remove non transformative frames"
     bl_options = {'REGISTER', 'UNDO'}
+
+    all_actions : BoolProperty(
+            name = 'All Actions',
+            description = 'Remove untransformative frames on all actions rather than only on active action',
+            default = False
+            )
 
     @classmethod
     def poll(cls, context):
         return get_current_armature_object()
 
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        self.layout.prop(self, 'all_actions')
+
     def execute(self, context):
 
-        obj = get_current_armature_object()
+        #obj = get_current_armature_object()
+        wm_props = context.window_manager.rigify_export_props
 
-        for action in bpy.data.actions:
-            if not action.rigify_export_props.enable_export: continue
+        if self.all_actions:
+            actions = bpy.data.actions
+        else:
+            # Get action
+            try: actions = [bpy.data.actions[wm_props.active_action]]
+            except:
+                self.report({'ERROR'}, "No action selected!")
+                return {'CANCELLED'}
 
-            for pb in obj.pose.bones:
-                pass
+        for action in actions:
+
+            print('ACTION:', action.name)
 
             for fcurve in action.fcurves:
-                pass
-                #if fcurve.group and fcurve.group.name not in bone_names:
-                #    bone_names.append(fcurve.group.name)
+                print(fcurve.data_path + " channel " + str(fcurve.array_index))
+                transformed_key_found = False
+
+                for keyframe in fcurve.keyframe_points:
+                    #print(keyframe.co)
+
+                    if fcurve.data_path.endswith('location'):
+                        if keyframe.co[1] != 0.0:
+                            transformed_key_found = True
+                            break
+                    elif fcurve.data_path.endswith('rotation_quaternion'):
+                        if fcurve.array_index == 0:
+                            if keyframe.co[1] != 1.0:
+                                transformed_key_found = True
+                                break
+                        else:
+                            if keyframe.co[1] != 0.0:
+                                transformed_key_found = True
+                                break
+                    elif fcurve.data_path.endswith('scale'):
+                        if keyframe.co[1] != 1.0:
+                            transformed_key_found = True
+                            break
+
+                if not transformed_key_found:
+                    self.report({'INFO'}, fcurve.data_path + ' is removed!')
+                    action.fcurves.remove(fcurve)
+
+        #print(transformed_key_found)
 
         return {'FINISHED'}
 
