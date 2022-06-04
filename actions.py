@@ -154,7 +154,13 @@ class YRemoveNonTransformativeFrames(bpy.types.Operator):
             default = False
             )
 
-    object_transform_no_remove : BoolProperty(
+    ignore_root : BoolProperty(
+            name = 'Do Not Remove Root Transformations',
+            description = 'Do not remove root transformations',
+            default = True
+            )
+
+    ignore_object_transform : BoolProperty(
             name = 'Do Not Remove Object Transformations',
             description = 'Do not remove object transformations',
             default = True
@@ -170,7 +176,8 @@ class YRemoveNonTransformativeFrames(bpy.types.Operator):
     def draw(self, context):
         self.layout.prop(self, 'all_actions')
         self.layout.prop(self, 'remove_nlas')
-        self.layout.prop(self, 'object_transform_no_remove')
+        self.layout.prop(self, 'ignore_root')
+        self.layout.prop(self, 'ignore_object_transform')
 
     def execute(self, context):
 
@@ -194,8 +201,12 @@ class YRemoveNonTransformativeFrames(bpy.types.Operator):
                 #print(fcurve.data_path + " channel " + str(fcurve.array_index))
                 transformed_key_found = False
 
-                if self.object_transform_no_remove:
+                if self.ignore_object_transform:
                     if fcurve.data_path in {'location', 'rotation_quaternion', 'rotation_euler', 'scale'}:
+                        continue
+
+                if self.ignore_root:
+                    if fcurve.data_path.startswith('pose.bones["root"]'):
                         continue
 
                 for keyframe in fcurve.keyframe_points:
