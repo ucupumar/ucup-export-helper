@@ -319,10 +319,10 @@ def draw_action_manager(self, context):
             "actions", props, "active_action", rows=3, maxrows=5)  
 
     col = listrow.column(align=True)
-    col.operator('armature.y_toggle_deselect_action', text='', icon='OUTLINER_OB_ARMATURE')
     col.operator('armature.y_new_action', text='', icon='ADD')
     col.operator('armature.y_remove_action', text='', icon='REMOVE')
     col.menu("ACTION_MT_y_action_list_special_menu", text='', icon='DOWNARROW_HLT')
+    col.operator('armature.y_toggle_deselect_action', text='', icon='OUTLINER_OB_ARMATURE')
 
     col = self.layout.column()
 
