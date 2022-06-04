@@ -3,6 +3,96 @@ from bpy.props import *
 from mathutils import *
 from .common import *
 
+class YNewAction(bpy.types.Operator):
+    bl_idname = "armature.y_new_action"
+    bl_label = "New Action"
+    bl_description = "New action"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    action_name : StringProperty(
+            name = 'Action Name',
+            description = 'New action name',
+            default = 'Action'
+            )
+
+    enable_fake_user : BoolProperty(
+            name = 'Enable Fake User',
+            description = "Enable fake user so animation don't dissapear after saving",
+            default = True
+            )
+
+    reset_pose : BoolProperty(
+            name = 'Reset Pose',
+            description = 'Reset pose',
+            default = True
+            )
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        self.layout.prop(self, 'action_name')
+        self.layout.prop(self, 'enable_fake_user')
+        self.layout.prop(self, 'reset_pose')
+
+    @classmethod
+    def poll(cls, context):
+        obj = get_current_armature_object()
+        return obj
+
+    def execute(self, context):
+        obj = get_current_armature_object()
+
+        # Make sure animation data is exists
+        if not obj.animation_data:
+            obj.animation_data_create()
+
+        action = bpy.data.actions.new(self.action_name)
+
+        if self.reset_pose:
+            obj.animation_data.action = None
+            for pb in obj.pose.bones:
+                #Set the rotation to 0
+                pb.rotation_quaternion = Quaternion((0, 0, 0), 0)
+                #Set the scale to 1
+                pb.scale = Vector((1, 1, 1))
+                #Set the location at rest (edit) pose bone position
+                pb.location = Vector((0, 0, 0))
+
+        obj.animation_data.action = action
+
+        if self.enable_fake_user:
+            action.use_fake_user = True
+
+        return {'FINISHED'}
+
+class YRemoveAction(bpy.types.Operator):
+    bl_idname = "armature.y_remove_action"
+    bl_label = "Remove Action"
+    bl_description = "Remove action"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        obj = get_current_armature_object()
+        return obj and obj.animation_data
+
+    def execute(self, context):
+
+        obj = get_current_armature_object()
+        wm_props = context.window_manager.rigify_export_props
+
+        try: action = bpy.data.actions[wm_props.active_action]
+        except:
+            self.report({'ERROR'}, "No action selected!")
+            return {'CANCELLED'}
+
+        bpy.data.actions.remove(action)
+
+        wm_props.active_action = min(wm_props.active_action, len(bpy.data.actions)-1)
+
+        return {'FINISHED'}
+
 class YToggleDeselectAction(bpy.types.Operator):
     bl_idname = "armature.y_toggle_deselect_action"
     bl_label = "Toggle Deselect Action"
@@ -29,6 +119,8 @@ class YToggleDeselectAction(bpy.types.Operator):
 
         if active_action == list_action:
 
+            obj.animation_data.action = None
+
             for pb in obj.pose.bones:
                 #Set the rotation to 0
                 pb.rotation_quaternion = Quaternion((0, 0, 0), 0)
@@ -36,8 +128,6 @@ class YToggleDeselectAction(bpy.types.Operator):
                 pb.scale = Vector((1, 1, 1))
                 #Set the location at rest (edit) pose bone position
                 pb.location = Vector((0, 0, 0))
-
-            obj.animation_data.action = None
 
         else:
             obj.animation_data.action = list_action
@@ -217,6 +307,8 @@ class UE4HELPER_PT_RigifyExportActionPanel(bpy.types.Panel):
 
         col = listrow.column(align=True)
         col.operator('armature.y_toggle_deselect_action', text='', icon='OUTLINER_OB_ARMATURE')
+        col.operator('armature.y_new_action', text='', icon='ADD')
+        col.operator('armature.y_remove_action', text='', icon='REMOVE')
         col.menu("ACTION_MT_y_action_list_special_menu", text='', icon='DOWNARROW_HLT')
 
         col = self.layout.column()
@@ -351,6 +443,9 @@ def update_action(self, context):
     obj =  get_current_armature_object()
     scene_props = context.scene.rigify_export_props
 
+    if self.active_action >= len(bpy.data.actions) or self.active_action < 0:
+        return
+
     # Get action
     action = bpy.data.actions[self.active_action]
     action_props = action.rigify_export_props
@@ -445,6 +540,8 @@ class YActionRigifyExportActionProps(bpy.types.PropertyGroup):
             update=update_frame_range)
 
 def register():
+    bpy.utils.register_class(YNewAction)
+    bpy.utils.register_class(YRemoveAction)
     bpy.utils.register_class(YToggleDeselectAction)
     bpy.utils.register_class(YRemoveNonTransformativeFrames)
     bpy.utils.register_class(YToggleActionSettings)
@@ -461,6 +558,8 @@ def register():
     bpy.types.WindowManager.rigify_export_props = PointerProperty(type=YWMRigifyExportActionProps)
 
 def unregister():
+    bpy.utils.unregister_class(YNewAction)
+    bpy.utils.unregister_class(YRemoveAction)
     bpy.utils.unregister_class(YToggleDeselectAction)
     bpy.utils.unregister_class(YRemoveNonTransformativeFrames)
     bpy.utils.unregister_class(YToggleActionSettings)
