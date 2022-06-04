@@ -54,6 +54,7 @@ class YNewAction(bpy.types.Operator):
             for pb in obj.pose.bones:
                 #Set the rotation to 0
                 pb.rotation_quaternion = Quaternion((0, 0, 0), 0)
+                pb.rotation_euler = Euler((0, 0, 0), 'XYZ')
                 #Set the scale to 1
                 pb.scale = Vector((1, 1, 1))
                 #Set the location at rest (edit) pose bone position
@@ -124,6 +125,7 @@ class YToggleDeselectAction(bpy.types.Operator):
             for pb in obj.pose.bones:
                 #Set the rotation to 0
                 pb.rotation_quaternion = Quaternion((0, 0, 0), 0)
+                pb.rotation_euler = Euler((0, 0, 0), 'XYZ')
                 #Set the scale to 1
                 pb.scale = Vector((1, 1, 1))
                 #Set the location at rest (edit) pose bone position
@@ -456,6 +458,7 @@ def update_action(self, context):
         for pb in obj.pose.bones:
             #Set the rotation to 0
             pb.rotation_quaternion = Quaternion((0, 0, 0), 0)
+            pb.rotation_euler = Euler((0, 0, 0), 'XYZ')
             #Set the scale to 1
             pb.scale = Vector((1, 1, 1))
             #Set the location at rest (edit) pose bone position

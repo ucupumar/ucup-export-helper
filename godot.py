@@ -54,10 +54,12 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
 
         # Remember rig object original matrices and original action
         quaternions = {}
+        eulers = {}
         scales = {}
         locations = {}
         for pb in rig_object.pose.bones:
             quaternions[pb.name] = pb.rotation_quaternion.copy()
+            eulers[pb.name] = pb.rotation_euler.copy()
             scales[pb.name] = pb.scale.copy()
             locations[pb.name] = pb.location.copy()
         if rig_object.animation_data:
@@ -104,6 +106,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                 for pb in rig_object.pose.bones:
                     #Set the rotation to 0
                     pb.rotation_quaternion = Quaternion((0, 0, 0), 0)
+                    pb.rotation_euler = Euler((0, 0, 0), 'XYZ')
                     #Set the scale to 1
                     pb.scale = Vector((1, 1, 1))
                     #Set the location at rest (edit) pose bone position
@@ -332,6 +335,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
         # Recover bone matrices and active action
         for pb in rig_object.pose.bones:
             pb.rotation_quaternion = quaternions[pb.name]
+            pb.rotation_euler = eulers[pb.name]
             pb.scale = scales[pb.name]
             pb.location = locations[pb.name]
         if rig_object.animation_data:
