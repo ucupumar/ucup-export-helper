@@ -40,6 +40,12 @@ class YRemoveNonTransformativeFrames(bpy.types.Operator):
             default = False
             )
 
+    remove_nlas : BoolProperty(
+            name = 'Remove NLA Tracks',
+            description = 'Remove all NLA tracks to avoid mixed animations',
+            default = False
+            )
+
     @classmethod
     def poll(cls, context):
         return get_current_armature_object()
@@ -49,10 +55,11 @@ class YRemoveNonTransformativeFrames(bpy.types.Operator):
 
     def draw(self, context):
         self.layout.prop(self, 'all_actions')
+        self.layout.prop(self, 'remove_nlas')
 
     def execute(self, context):
 
-        #obj = get_current_armature_object()
+        obj = get_current_armature_object()
         wm_props = context.window_manager.rigify_export_props
 
         if self.all_actions:
@@ -66,10 +73,10 @@ class YRemoveNonTransformativeFrames(bpy.types.Operator):
 
         for action in actions:
 
-            print('ACTION:', action.name)
+            #print('ACTION:', action.name)
 
             for fcurve in action.fcurves:
-                print(fcurve.data_path + " channel " + str(fcurve.array_index))
+                #print(fcurve.data_path + " channel " + str(fcurve.array_index))
                 transformed_key_found = False
 
                 for keyframe in fcurve.keyframe_points:
@@ -88,14 +95,23 @@ class YRemoveNonTransformativeFrames(bpy.types.Operator):
                             if keyframe.co[1] != 0.0:
                                 transformed_key_found = True
                                 break
+                    elif fcurve.data_path.endswith('rotation_euler'):
+                        if keyframe.co[1] != 0.0:
+                            transformed_key_found = True
+                            break
                     elif fcurve.data_path.endswith('scale'):
                         if keyframe.co[1] != 1.0:
                             transformed_key_found = True
                             break
 
                 if not transformed_key_found:
-                    self.report({'INFO'}, fcurve.data_path + ' is removed!')
+                    self.report({'INFO'}, action.name + ' ' + fcurve.data_path + ' is removed!')
                     action.fcurves.remove(fcurve)
+
+        # Remove NLA tracks
+        if self.remove_nlas:
+            for track in reversed(obj.animation_data.nla_tracks):
+                obj.animation_data.nla_tracks.remove(track)
 
         #print(transformed_key_found)
 
