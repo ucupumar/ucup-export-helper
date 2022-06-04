@@ -154,6 +154,12 @@ class YRemoveNonTransformativeFrames(bpy.types.Operator):
             default = False
             )
 
+    object_transform_no_remove : BoolProperty(
+            name = 'Do Not Remove Object Transformations',
+            description = 'Do not remove object transformations',
+            default = True
+            )
+
     @classmethod
     def poll(cls, context):
         return get_current_armature_object()
@@ -164,6 +170,7 @@ class YRemoveNonTransformativeFrames(bpy.types.Operator):
     def draw(self, context):
         self.layout.prop(self, 'all_actions')
         self.layout.prop(self, 'remove_nlas')
+        self.layout.prop(self, 'object_transform_no_remove')
 
     def execute(self, context):
 
@@ -186,6 +193,10 @@ class YRemoveNonTransformativeFrames(bpy.types.Operator):
             for fcurve in action.fcurves:
                 #print(fcurve.data_path + " channel " + str(fcurve.array_index))
                 transformed_key_found = False
+
+                if self.object_transform_no_remove:
+                    if fcurve.data_path in {'location', 'rotation_quaternion', 'rotation_euler', 'scale'}:
+                        continue
 
                 for keyframe in fcurve.keyframe_points:
                     #print(keyframe.co)
