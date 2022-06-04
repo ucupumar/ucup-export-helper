@@ -3,10 +3,10 @@ from bpy.props import *
 from mathutils import *
 from .common import *
 
-class YDeselectAction(bpy.types.Operator):
-    bl_idname = "armature.y_deselect_action"
-    bl_label = "Deselect Action"
-    bl_description = "Deselect action"
+class YToggleDeselectAction(bpy.types.Operator):
+    bl_idname = "armature.y_toggle_deselect_action"
+    bl_label = "Toggle Deselect Action"
+    bl_description = "Toggle Deselect action"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
@@ -16,15 +16,31 @@ class YDeselectAction(bpy.types.Operator):
 
     def execute(self, context):
         obj = get_current_armature_object()
-        obj.animation_data.action = None
+        wm_props = context.window_manager.rigify_export_props
 
-        for pb in obj.pose.bones:
-            #Set the rotation to 0
-            pb.rotation_quaternion = Quaternion((0, 0, 0), 0)
-            #Set the scale to 1
-            pb.scale = Vector((1, 1, 1))
-            #Set the location at rest (edit) pose bone position
-            pb.location = Vector((0, 0, 0))
+        active_action = None
+        list_action = None
+
+        if obj.animation_data:
+            active_action = obj.animation_data.action
+
+        try: list_action = bpy.data.actions[wm_props.active_action]
+        except: pass
+
+        if active_action == list_action:
+
+            for pb in obj.pose.bones:
+                #Set the rotation to 0
+                pb.rotation_quaternion = Quaternion((0, 0, 0), 0)
+                #Set the scale to 1
+                pb.scale = Vector((1, 1, 1))
+                #Set the location at rest (edit) pose bone position
+                pb.location = Vector((0, 0, 0))
+
+            obj.animation_data.action = None
+
+        else:
+            obj.animation_data.action = list_action
 
         return {'FINISHED'}
 
@@ -200,13 +216,13 @@ class UE4HELPER_PT_RigifyExportActionPanel(bpy.types.Panel):
                 "actions", props, "active_action", rows=3, maxrows=5)  
 
         col = listrow.column(align=True)
-        col.operator('armature.y_deselect_action', text='', icon='OUTLINER_OB_ARMATURE')
+        col.operator('armature.y_toggle_deselect_action', text='', icon='OUTLINER_OB_ARMATURE')
         col.menu("ACTION_MT_y_action_list_special_menu", text='', icon='DOWNARROW_HLT')
 
         col = self.layout.column()
 
         #if action:
-        #col.operator('armature.y_deselect_action', icon='ACTION')
+        #col.operator('armature.y_toggle_deselect_action', icon='ACTION')
 
         r = col.row()
         rr = r.row()
@@ -429,7 +445,7 @@ class YActionRigifyExportActionProps(bpy.types.PropertyGroup):
             update=update_frame_range)
 
 def register():
-    bpy.utils.register_class(YDeselectAction)
+    bpy.utils.register_class(YToggleDeselectAction)
     bpy.utils.register_class(YRemoveNonTransformativeFrames)
     bpy.utils.register_class(YToggleActionSettings)
     bpy.utils.register_class(YToggleActionGlobalSettings)
@@ -445,7 +461,7 @@ def register():
     bpy.types.WindowManager.rigify_export_props = PointerProperty(type=YWMRigifyExportActionProps)
 
 def unregister():
-    bpy.utils.unregister_class(YDeselectAction)
+    bpy.utils.unregister_class(YToggleDeselectAction)
     bpy.utils.unregister_class(YRemoveNonTransformativeFrames)
     bpy.utils.unregister_class(YToggleActionSettings)
     bpy.utils.unregister_class(YToggleActionGlobalSettings)
