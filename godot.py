@@ -426,7 +426,7 @@ class SceneGodotRigifyProps(bpy.types.PropertyGroup):
             description = 'Export rig parental mode',
             items = (
                 ('NO_CHANGES', 'No changes', 'No changes on deform bone parents'),
-                ('UNPARENT_ALL', 'Unparent All Bones', 'Unparent all deform bones'),
+                ('UNPARENT_ALL', 'Unparent All', 'Unparent all deform bones'),
                 ),
             default = 'NO_CHANGES')
 
