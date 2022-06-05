@@ -73,7 +73,8 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
         use_rigify = check_use_rigify(rig_object.data)
 
         # Get export rig
-        export_rig_ob = extract_export_rig(context, rig_object, scale, use_rigify)
+        unparent_all = True if scene_props.parental_mode == 'UNPARENT_ALL' else False
+        export_rig_ob = extract_export_rig(context, rig_object, scale, use_rigify, unparent_all=unparent_all)
 
         # Get export mesh objects
         export_mesh_objs = extract_export_meshes(context, mesh_objects, export_rig_ob, scale)
@@ -401,6 +402,9 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
             col.prop(scene_props, 'apply_modifiers')
             col.prop(scene_props, 'export_tangent')
             col.prop(scene_props, 'copy_images')
+            row = col.split(factor=0.4)
+            row.label(text='Bone Parents:')
+            row.prop(scene_props, 'parental_mode', text='')
 
 class SceneGodotRigifyProps(bpy.types.PropertyGroup):
     show_rig_export_options : BoolProperty(default=False)
@@ -416,6 +420,15 @@ class SceneGodotRigifyProps(bpy.types.PropertyGroup):
 
     copy_images : BoolProperty(default=False, 
             name='Copy Images', description="Copy Images (create images/ subfolder)")
+
+    parental_mode : EnumProperty(
+            name = 'Export Rig Parental Mode',
+            description = 'Export rig parental mode',
+            items = (
+                ('NO_CHANGES', 'No changes', 'No changes on deform bone parents'),
+                ('UNPARENT_ALL', 'Unparent All Bones', 'Unparent all deform bones'),
+                ),
+            default = 'NO_CHANGES')
 
 def register():
     bpy.utils.register_class(ExportRigifyGLTF)

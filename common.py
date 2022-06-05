@@ -196,7 +196,7 @@ def get_vertex_group_names(objects):
 #    return mesh_objects
 
 #def extract_export_rig(context, source_object, scale, meshes_to_evaluate = []):
-def extract_export_rig(context, source_object, scale, use_rigify=False):
+def extract_export_rig(context, source_object, scale, use_rigify=False, unparent_all=False):
 
     scene = context.scene
 
@@ -240,6 +240,10 @@ def extract_export_rig(context, source_object, scale, use_rigify=False):
                 parent_name = bone.parent.name.replace('ORG-', 'DEF-')
                 parent = edit_bones.get(parent_name)
                 bone.parent = parent
+    
+    if unparent_all:
+        for bone in edit_bones:
+            bone.parent = None
 
     # Delete other than deform bones
     for bone in edit_bones:
