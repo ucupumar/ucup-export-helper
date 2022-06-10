@@ -402,6 +402,7 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
             col.prop(scene_props, 'apply_modifiers')
             col.prop(scene_props, 'export_tangent')
             col.prop(scene_props, 'copy_images')
+            col.prop(scene_props, 'only_export_baked_vcols')
             row = col.split(factor=0.4)
             row.label(text='Bone Parents:')
             row.prop(scene_props, 'parental_mode', text='')
@@ -420,6 +421,9 @@ class SceneGodotRigifyProps(bpy.types.PropertyGroup):
 
     copy_images : BoolProperty(default=False, 
             name='Copy Images', description="Copy Images (create images/ subfolder)")
+
+    only_export_baked_vcols : BoolProperty(default=False,
+            name='Only Export Baked Vertex Colors', description="Only export vertex colors which has 'Baked' prefix")
 
     parental_mode : EnumProperty(
             name = 'Export Rig Parental Mode',
