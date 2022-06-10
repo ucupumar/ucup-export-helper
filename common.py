@@ -201,8 +201,8 @@ def extract_export_rig(context, source_object, scale, use_rigify=False, unparent
     scene = context.scene
 
     # Check if this object is a proxy or not
-    if source_object.proxy:
-        source_object = source_object.proxy
+    #if source_object.proxy:
+    #    source_object = source_object.proxy
 
     # Set to object mode
     if context.mode != 'OBJECT':
@@ -324,7 +324,7 @@ def extract_export_rig(context, source_object, scale, use_rigify=False, unparent
 
     return export_rig_ob
 
-def extract_export_meshes(context, mesh_objects, export_rig_ob, scale):
+def extract_export_meshes(context, mesh_objects, export_rig_ob, scale, only_export_baked_vcols=False):
     
     scene = context.scene
 
@@ -373,6 +373,12 @@ def extract_export_meshes(context, mesh_objects, export_rig_ob, scale):
 
         # Parent to export rig
         new_obj.parent = export_rig_ob
+
+        # Remove vcols
+        if only_export_baked_vcols and new_obj.type == 'MESH':
+            for vcol in reversed(new_obj.data.color_attributes):
+                if not vcol.name.startswith('Baked '):
+                    new_obj.data.color_attributes.remove(vcol)
 
         # Populate exported meshes list
         export_objs.append(new_obj)

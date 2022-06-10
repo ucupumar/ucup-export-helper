@@ -77,7 +77,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
         export_rig_ob = extract_export_rig(context, rig_object, scale, use_rigify, unparent_all=unparent_all)
 
         # Get export mesh objects
-        export_mesh_objs = extract_export_meshes(context, mesh_objects, export_rig_ob, scale)
+        export_mesh_objs = extract_export_meshes(context, mesh_objects, export_rig_ob, scale, scene_props.only_export_baked_vcols)
 
         # Set to object mode
         if context.mode != 'OBJECT':
@@ -91,8 +91,6 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
         actions = []
         skipped_actions = []
         baked_actions = []
-
-        #return {'FINISHED'}
 
         # Deals with animations
         if scene_props.export_animations:
@@ -236,8 +234,6 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
         for obj in export_mesh_objs:
             select_set(obj, True)
 
-        #return {'FINISHED'}
-
         ## EXPORT!
         if is_greater_than_280():
             bpy.ops.export_scene.gltf(
@@ -264,7 +260,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                     use_mesh_edges=False, 
                     use_mesh_vertices=False, 
                     export_cameras=False, 
-                    export_selected=True, 
+                    #export_selected=True, 
                     use_selection=True, 
                     use_visible=False, 
                     use_renderable=False, 
@@ -312,7 +308,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                     use_metadata = True
                     )
 
-        # Delete exported object
+        # Delete exported objects
         bpy.ops.object.delete()
 
         # Delete baked actions
