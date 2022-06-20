@@ -1,4 +1,5 @@
 import bpy, os
+from mathutils import *
 
 def is_greater_than_280():
     if bpy.app.version >= (2, 80, 0):
@@ -615,3 +616,23 @@ def move_root(scene, obj):
     set_active(obj)
     select_set(obj, True)
 
+def reset_pose_bones(obj):
+    for pb in obj.pose.bones:
+
+        # Set the rotation to 0
+        if not pb.lock_rotation_w:
+            pb.rotation_quaternion[0] = 1.0
+        for i in range(3):
+            if not pb.lock_rotation[i]:
+                pb.rotation_quaternion[i+1] = 0.0
+                pb.rotation_euler[0] = 0.0
+
+        # Set the scale to 1
+        for i in range(3):
+            if not pb.lock_scale[i]:
+                pb.scale[i] = 1.0
+
+        # Set the location at rest (edit) pose bone position
+        for i in range(3):
+            if not pb.lock_location[i]:
+                pb.location[i] = 0.0

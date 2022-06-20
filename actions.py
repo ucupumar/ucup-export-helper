@@ -51,14 +51,7 @@ class YNewAction(bpy.types.Operator):
 
         if self.reset_pose:
             obj.animation_data.action = None
-            for pb in obj.pose.bones:
-                #Set the rotation to 0
-                pb.rotation_quaternion = Quaternion((0, 0, 0), 0)
-                pb.rotation_euler = Euler((0, 0, 0), 'XYZ')
-                #Set the scale to 1
-                pb.scale = Vector((1, 1, 1))
-                #Set the location at rest (edit) pose bone position
-                pb.location = Vector((0, 0, 0))
+            reset_pose_bones(obj)
 
         obj.animation_data.action = action
 
@@ -122,14 +115,7 @@ class YToggleDeselectAction(bpy.types.Operator):
 
             obj.animation_data.action = None
 
-            for pb in obj.pose.bones:
-                #Set the rotation to 0
-                pb.rotation_quaternion = Quaternion((0, 0, 0), 0)
-                pb.rotation_euler = Euler((0, 0, 0), 'XYZ')
-                #Set the scale to 1
-                pb.scale = Vector((1, 1, 1))
-                #Set the location at rest (edit) pose bone position
-                pb.location = Vector((0, 0, 0))
+            reset_pose_bones(obj)
 
         else:
             obj.animation_data.action = list_action
@@ -493,14 +479,7 @@ def update_action(self, context):
     # Reset all bone transformations first
     if scene_props.sync_unkeyframed_bones:
 
-        for pb in obj.pose.bones:
-            #Set the rotation to 0
-            pb.rotation_quaternion = Quaternion((0, 0, 0), 0)
-            pb.rotation_euler = Euler((0, 0, 0), 'XYZ')
-            #Set the scale to 1
-            pb.scale = Vector((1, 1, 1))
-            #Set the location at rest (edit) pose bone position
-            pb.location = Vector((0, 0, 0))
+        reset_pose_bones(obj)
 
     # Set action
     if not obj.animation_data:
