@@ -102,14 +102,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                 action_props = action.rigify_export_props
 
                 # Reset all bone transformations first
-                for pb in rig_object.pose.bones:
-                    #Set the rotation to 0
-                    pb.rotation_quaternion = Quaternion((0, 0, 0), 0)
-                    pb.rotation_euler = Euler((0, 0, 0), 'XYZ')
-                    #Set the scale to 1
-                    pb.scale = Vector((1, 1, 1))
-                    #Set the location at rest (edit) pose bone position
-                    pb.location = Vector((0, 0, 0))
+                reset_pose_bones(rig_object)
 
                 # Set active action
                 rig_object.animation_data.action = action
