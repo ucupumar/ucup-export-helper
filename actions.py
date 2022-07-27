@@ -181,48 +181,10 @@ class YRemoveNonTransformativeFrames(bpy.types.Operator):
 
         for action in actions:
 
-            #print('ACTION:', action.name)
+            msgs = remove_non_transformed_keyframes(action, self.ignore_object_transform, self.ignore_root)
 
-            for fcurve in action.fcurves:
-                #print(fcurve.data_path + " channel " + str(fcurve.array_index))
-                transformed_key_found = False
-
-                if self.ignore_object_transform:
-                    if fcurve.data_path in {'location', 'rotation_quaternion', 'rotation_euler', 'scale'}:
-                        continue
-
-                if self.ignore_root:
-                    if fcurve.data_path.startswith('pose.bones["root"]'):
-                        continue
-
-                for keyframe in fcurve.keyframe_points:
-                    #print(keyframe.co)
-
-                    if fcurve.data_path.endswith('location'):
-                        if keyframe.co[1] != 0.0:
-                            transformed_key_found = True
-                            break
-                    elif fcurve.data_path.endswith('rotation_quaternion'):
-                        if fcurve.array_index == 0:
-                            if keyframe.co[1] != 1.0:
-                                transformed_key_found = True
-                                break
-                        else:
-                            if keyframe.co[1] != 0.0:
-                                transformed_key_found = True
-                                break
-                    elif fcurve.data_path.endswith('rotation_euler'):
-                        if keyframe.co[1] != 0.0:
-                            transformed_key_found = True
-                            break
-                    elif fcurve.data_path.endswith('scale'):
-                        if keyframe.co[1] != 1.0:
-                            transformed_key_found = True
-                            break
-
-                if not transformed_key_found:
-                    self.report({'INFO'}, action.name + ' ' + fcurve.data_path + ' is removed!')
-                    action.fcurves.remove(fcurve)
+            for msg in msgs:
+                self.report({'INFO'}, msg)
 
         # Remove NLA tracks
         if self.remove_nlas:
