@@ -631,7 +631,7 @@ def reset_pose_bones(obj):
         for i in range(3):
             if not pb.lock_rotation[i]:
                 pb.rotation_quaternion[i+1] = 0.0
-                pb.rotation_euler[0] = 0.0
+                pb.rotation_euler[i] = 0.0
 
         # Set the scale to 1
         for i in range(3):
