@@ -77,7 +77,9 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
         export_rig_ob = extract_export_rig(context, rig_object, scale, use_rigify, unparent_all=unparent_all)
 
         # Get export mesh objects
-        export_mesh_objs = extract_export_meshes(context, mesh_objects, export_rig_ob, scale, scene_props.only_export_baked_vcols)
+        #export_mesh_objs = extract_export_meshes(context, mesh_objects, export_rig_ob, scale, scene_props.only_export_baked_vcols)
+        export_mesh_objs = extract_export_meshes(context, mesh_objects, export_rig_ob, scale, 
+                scene_props.export_vcols_mode == 'ONLY_BAKED')
 
         # Set to object mode
         if context.mode != 'OBJECT':
@@ -249,7 +251,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                     #export_draco_generic_quantization=12, 
                     export_tangents = scene_props.export_tangent,
                     export_materials='EXPORT', 
-                    export_colors=True, 
+                    export_colors = scene_props.export_vcols_mode != 'NONE', 
                     use_mesh_edges=False, 
                     use_mesh_vertices=False, 
                     export_cameras=False, 
@@ -391,7 +393,10 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
             col.prop(scene_props, 'apply_modifiers')
             col.prop(scene_props, 'export_tangent')
             col.prop(scene_props, 'copy_images')
-            col.prop(scene_props, 'only_export_baked_vcols')
+            #col.prop(scene_props, 'only_export_baked_vcols')
+            row = col.split(factor=0.4)
+            row.label(text='Export Vertex Colors:')
+            row.prop(scene_props, 'export_vcols_mode', text='')
             row = col.split(factor=0.4)
             row.label(text='Bone Parents:')
             row.prop(scene_props, 'parental_mode', text='')
@@ -413,6 +418,16 @@ class SceneGodotRigifyProps(bpy.types.PropertyGroup):
 
     only_export_baked_vcols : BoolProperty(default=False,
             name='Only Export Baked Vertex Colors', description="Only export vertex colors which has 'Baked' prefix")
+
+    export_vcols_mode : EnumProperty(
+            name = 'Export Vertex Colors Mode',
+            description = 'Export vertex colors mode',
+            items = (
+                ('NONE', 'None', 'Export no vertex colors'),
+                ('ONLY_BAKED', 'Only Baked ', 'Only export baked vertex colors'),
+                ('ALL', 'All ', 'Export all vertex colors'),
+                ),
+            default = 'NONE')
 
     parental_mode : EnumProperty(
             name = 'Export Rig Parental Mode',
