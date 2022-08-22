@@ -450,7 +450,7 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
             col.prop(scene_props, 'export_animations')
             col.prop(scene_props, 'apply_modifiers')
             col.prop(scene_props, 'export_tangent')
-            col.prop(scene_props, 'copy_images')
+            #col.prop(scene_props, 'copy_images')
             col.prop(scene_props, 'export_vcols')
 
             row = col.row()
