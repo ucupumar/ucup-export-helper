@@ -262,7 +262,8 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
             bpy.ops.export_scene.gltf(
                     filepath=self.filepath,
                     #check_existing=True, 
-                    export_format='GLTF_EMBEDDED', 
+                    #export_format='GLTF_EMBEDDED', 
+                    export_format=scene_props.gltf_format,
                     #ui_tab='GENERAL', 
                     #export_copyright='', 
                     export_image_format='AUTO', 
@@ -462,6 +463,10 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
             row.label(text='Bone Parents:')
             row.prop(scene_props, 'parental_mode', text='')
 
+            row = col.split(factor=0.4)
+            row.label(text='GLTF Format:')
+            row.prop(scene_props, 'gltf_format', text='')
+
 class SceneGodotRigifyProps(bpy.types.PropertyGroup):
     show_rig_export_options : BoolProperty(default=False)
 
@@ -494,6 +499,15 @@ class SceneGodotRigifyProps(bpy.types.PropertyGroup):
                 ('UNPARENT_ALL', 'Unparent All', 'Unparent all deform bones'),
                 ),
             default = 'NO_CHANGES')
+
+    gltf_format : EnumProperty(
+            name = 'GLTF Format',
+            description = 'GLTF format',
+            items = (
+                ('GLTF_EMBEDDED', 'GLTF Embedded', 'GLTF Embedded'),
+                ('GLTF_SEPARATE', 'GLTF Separate', 'GLTF Separate'),
+                ),
+            default = 'GLTF_EMBEDDED')
 
 def register():
     bpy.utils.register_class(ExportRigifyGLTF)
