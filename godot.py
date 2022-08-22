@@ -77,13 +77,41 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
         export_rig_ob = extract_export_rig(context, rig_object, scale, use_rigify, unparent_all=unparent_all)
 
         # Get export mesh objects
-        #export_mesh_objs = extract_export_meshes(context, mesh_objects, export_rig_ob, scale, scene_props.only_export_baked_vcols)
-        export_mesh_objs = extract_export_meshes(context, mesh_objects, export_rig_ob, scale, 
-                scene_props.export_vcols_mode == 'ONLY_BAKED')
+        export_mesh_objs = extract_export_meshes(context, mesh_objects, export_rig_ob, scale, scene_props.only_export_baked_vcols)
 
         # Set to object mode
         if context.mode != 'OBJECT':
             bpy.ops.object.mode_set(mode='OBJECT')
+
+        # Set ucupaint baked outside
+        ori_not_use_baked = []
+        ori_not_use_baked_outside = []
+        if scene_props.ucupaint_baked_outside:
+            for ob in export_mesh_objs:
+                for i, ms in enumerate(ob.material_slots):
+                    mat = ms.material
+                    if not mat or not mat.node_tree: continue
+                    for n in mat.node_tree.nodes:
+                        if n.type == 'GROUP' and n.node_tree and n.node_tree.yp.is_ypaint_node:
+                            yp = n.node_tree.yp
+                            baked_found = any([c for c in yp.channels if n.node_tree.nodes.get(c.baked)])
+                            if baked_found:
+
+                                if not yp.use_baked or not yp.enable_baked_outside:
+                                    set_active(ob)
+                                    select_set(ob, True)
+                                    ob.active_material_index = i
+                                    mat.node_tree.nodes.active = n
+
+                                if not yp.use_baked: 
+                                    ori_not_use_baked.append(n.node_tree)
+                                    yp.use_baked = True
+
+                                if not yp.enable_baked_outside: 
+                                    ori_not_use_baked_outside.append(n.node_tree)
+                                    yp.enable_baked_outside = True
+
+                select_set(ob, False)
 
         # Select rig export object
         set_active(export_rig_ob)
@@ -251,7 +279,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                     #export_draco_generic_quantization=12, 
                     export_tangents = scene_props.export_tangent,
                     export_materials='EXPORT', 
-                    export_colors = scene_props.export_vcols_mode != 'NONE', 
+                    export_colors = scene_props.export_vcols,
                     use_mesh_edges=False, 
                     use_mesh_vertices=False, 
                     export_cameras=False, 
@@ -320,6 +348,35 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
 
         # Descale original rig
         rig_object.scale /= scale
+        
+        # Recover ucupaint use baked
+        if scene_props.ucupaint_baked_outside and (any(ori_not_use_baked) or any(ori_not_use_baked_outside)):
+            already_not_use_baked = []
+            already_not_use_baked_outside = []
+            for ob in context.view_layer.objects:
+                for i, ms in enumerate(ob.material_slots):
+                    mat = ms.material
+                    if not mat or not mat.node_tree: continue
+                    for n in mat.node_tree.nodes:
+                        if n.type == 'GROUP' and n.node_tree:
+
+                            if ((n.node_tree in ori_not_use_baked and n.node_tree not in already_not_use_baked) or
+                                (n.node_tree in ori_not_use_baked_outside and n.node_tree not in already_not_use_baked_outside)
+                                ):
+                                set_active(ob)
+                                select_set(ob, True)
+                                ob.active_material_index = i
+                                mat.node_tree.nodes.active = n
+
+                            if n.node_tree in ori_not_use_baked and n.node_tree not in already_not_use_baked:
+                                n.node_tree.yp.use_baked = False
+                                already_not_use_baked.append(n.node_tree)
+
+                            if n.node_tree in ori_not_use_baked_outside and n.node_tree not in already_not_use_baked_outside:
+                                n.node_tree.yp.enable_baked_outside = False
+                                already_not_use_baked_outside.append(n.node_tree)
+
+                select_set(ob, False)
 
         # Load original state
         state.load(context)
@@ -393,10 +450,14 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
             col.prop(scene_props, 'apply_modifiers')
             col.prop(scene_props, 'export_tangent')
             col.prop(scene_props, 'copy_images')
-            #col.prop(scene_props, 'only_export_baked_vcols')
-            row = col.split(factor=0.4)
-            row.label(text='Export Vertex Colors:')
-            row.prop(scene_props, 'export_vcols_mode', text='')
+            col.prop(scene_props, 'export_vcols')
+
+            row = col.row()
+            row.active = scene_props.export_vcols
+            row.prop(scene_props, 'only_export_baked_vcols')
+
+            col.prop(scene_props, 'ucupaint_baked_outside')
+
             row = col.split(factor=0.4)
             row.label(text='Bone Parents:')
             row.prop(scene_props, 'parental_mode', text='')
@@ -416,18 +477,14 @@ class SceneGodotRigifyProps(bpy.types.PropertyGroup):
     copy_images : BoolProperty(default=False, 
             name='Copy Images', description="Copy Images (create images/ subfolder)")
 
+    export_vcols : BoolProperty(default=False,
+            name='Export Vertex Colors', description="Export vertex colors")
+
     only_export_baked_vcols : BoolProperty(default=False,
             name='Only Export Baked Vertex Colors', description="Only export vertex colors which has 'Baked' prefix")
 
-    export_vcols_mode : EnumProperty(
-            name = 'Export Vertex Colors Mode',
-            description = 'Export vertex colors mode',
-            items = (
-                ('NONE', 'None', 'Export no vertex colors'),
-                ('ONLY_BAKED', 'Only Baked ', 'Only export baked vertex colors'),
-                ('ALL', 'All ', 'Export all vertex colors'),
-                ),
-            default = 'NONE')
+    ucupaint_baked_outside : BoolProperty(default=True,
+            name='Use Baked Outside (Ucupaint)', description='Make sure ucupaint nodes use baked outside')
 
     parental_mode : EnumProperty(
             name = 'Export Rig Parental Mode',
