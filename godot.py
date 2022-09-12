@@ -306,10 +306,11 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                     export_morph_normal=True, 
                     export_morph_tangent=False, 
                     export_lights=False, 
-                    export_displacement=False, 
+                    #export_displacement=False, 
                     #will_save_settings=False, 
                     #filter_glob='*.glb;*.gltf'
                     )
+            
         else:
             # NOTE: OLD IMPLEMENTATION
             bpy.ops.export_scene.dae(

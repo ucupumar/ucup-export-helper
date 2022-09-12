@@ -2,7 +2,7 @@ bl_info = {
     "name": "Ucup Export Helper",
     "author": "Yusuf Umar",
     "version": (0, 0, 0),
-    "blender": (3, 2, 0),
+    "blender": (3, 3, 0),
     "location": "View 3D > Tool Shelf > Ucup Exporter",
     "description": "Tool to help exporting things to Godot",
     "wiki_url": "http://twitter.com/ucupumar",
