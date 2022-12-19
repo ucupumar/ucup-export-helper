@@ -122,6 +122,10 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
         skipped_actions = []
         baked_actions = []
 
+        # Go to pose mode
+        bpy.ops.object.mode_set(mode='POSE')
+        #bpy.ops.pose.select_all(action='SELECT')
+
         # Deals with animations
         if scene_props.export_animations:
 
@@ -156,6 +160,8 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                 if action_props.enable_loop and action_props.enable_skip_last_frame and not action.use_frame_range:
                     frame_end -= 1
 
+                print("INFO: Baking action '" + action_name + "'...")
+
                 # Bake animations
                 bpy.ops.nla.bake(
                         frame_start=frame_start,
@@ -164,6 +170,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                         visual_keying=True, 
                         clear_constraints=True, 
                         use_current_action=True, 
+                        clean_curves = True,
                         bake_types={'POSE'})
 
                 # Rename baked action so it will be exported
@@ -189,149 +196,65 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                 track = export_rig_ob.animation_data.nla_tracks.new()
                 strip = track.strips.new(ba.name, int(ba.frame_start), ba)
 
-        # NOTE: OLD IMPLEMENTATION
-        if False and scene_props.export_animations:
-
-            # Make sure animation data is exists
-            if not rig_object.animation_data:
-                rig_object.animation_data_create()
-
-            # Get valid actions
-            for action in bpy.data.actions:
-                if action.name.endswith('-noexp'): continue
-                
-                # Add -noexp to skipped actions
-                if not action.rigify_export_props.enable_export:
-                    action.name += '-noexp'
-                    skipped_actions.append(action)
-                else:
-                    actions.append(action)
-
-            # Bake all valid actions
-            for action in actions:
-
-                action_props = action.rigify_export_props
-
-                # Set active action
-                rig_object.animation_data.action = action
-
-                # Remember active action name
-                action_name = action.name
-
-                # Set active action name to use -noexp, so it won't be exported
-                action.name += '-noexp'
-
-                # Make constraint
-                make_constraint(context, rig_object, export_rig_ob)
-
-                # Frame start and end
-                frame_start = int(action.frame_range[0])
-                frame_end = int(action.frame_range[1])
-                if action_props.enable_loop and action_props.enable_skip_last_frame:
-                    frame_end -= 1
-
-                # Bake animations
-                bpy.ops.nla.bake(
-                        frame_start=frame_start,
-                        frame_end=frame_end,
-                        only_selected=True, 
-                        visual_keying=True, 
-                        clear_constraints=True, 
-                        use_current_action=True, 
-                        bake_types={'POSE'})
-
-                # Rename baked action so it will be exported
-                baked_action = export_rig_ob.animation_data.action
-                baked_action.name = action_name
-
-                if not baked_action.name.endswith('-loop') and action_props.enable_loop:
-                    baked_action.name += '-loop'
-
-                # Remember baked actions so it can be removed later
-                baked_actions.append(baked_action)
-
-                # Set active action back to None
-                export_rig_ob.animation_data.action = None
+        # Back to object mode
+        bpy.ops.object.mode_set(mode='OBJECT')
 
         # Select export objects
         for obj in export_mesh_objs:
             select_set(obj, True)
 
         ## EXPORT!
-        if is_greater_than_280():
-            bpy.ops.export_scene.gltf(
-                    filepath=self.filepath,
-                    #check_existing=True, 
-                    #export_format='GLTF_EMBEDDED', 
-                    export_format=scene_props.gltf_format,
-                    #ui_tab='GENERAL', 
-                    #export_copyright='', 
-                    export_image_format='AUTO', 
-                    export_texture_dir='', 
-                    export_keep_originals=False, 
-                    export_texcoords=True, 
-                    export_normals=True, 
-                    #export_draco_mesh_compression_enable=False, 
-                    #export_draco_mesh_compression_level=6, 
-                    #export_draco_position_quantization=14, 
-                    #export_draco_normal_quantization=10, 
-                    #export_draco_texcoord_quantization=12, 
-                    #export_draco_color_quantization=10, 
-                    #export_draco_generic_quantization=12, 
-                    export_tangents = scene_props.export_tangent,
-                    export_materials='EXPORT', 
-                    export_colors = scene_props.export_vcols,
-                    use_mesh_edges=False, 
-                    use_mesh_vertices=False, 
-                    export_cameras=False, 
-                    #export_selected=True, 
-                    use_selection=True, 
-                    use_visible=False, 
-                    use_renderable=False, 
-                    use_active_collection=False, 
-                    export_extras=False, 
-                    export_yup=True, 
-                    export_apply = scene_props.apply_modifiers,
-                    export_animations = scene_props.export_animations,
-                    export_frame_range=True, 
-                    export_frame_step=1, 
-                    export_force_sampling=True, 
-                    export_nla_strips = scene_props.export_animations, 
-                    export_def_bones=False, 
-                    optimize_animation_size=True, 
-                    export_current_frame=False, 
-                    export_skins=True, 
-                    export_all_influences=False, 
-                    export_morph=True, 
-                    export_morph_normal=True, 
-                    export_morph_tangent=False, 
-                    export_lights=False, 
-                    #export_displacement=False, 
-                    #will_save_settings=False, 
-                    #filter_glob='*.glb;*.gltf'
-                    )
-            
-        else:
-            # NOTE: OLD IMPLEMENTATION
-            bpy.ops.export_scene.dae(
-                    filepath = self.filepath,
-                    object_types = {'ARMATURE', 'MESH'},
-                    use_export_selected = True,
-                    use_mesh_modifiers = scene_props.apply_modifiers,
-                    use_exclude_armature_modifier = True,
-                    use_tangent_arrays = scene_props.export_tangent,
-                    use_triangles = False,
-                    use_copy_images = scene_props.copy_images,
-                    use_active_layers = True,
-                    use_exclude_ctrl_bones = False,
-                    use_anim = scene_props.export_animations,
-                    use_anim_action_all = True,
-                    use_anim_skip_noexp = True,
-                    use_anim_optimize = True,
-                    use_shape_key_export = False,
-                    anim_optimize_precision = 6.0,
-                    use_metadata = True
-                    )
+        bpy.ops.export_scene.gltf(
+                filepath=self.filepath,
+                #check_existing=True, 
+                #export_format='GLTF_EMBEDDED', 
+                export_format=scene_props.gltf_format,
+                #ui_tab='GENERAL', 
+                #export_copyright='', 
+                export_image_format='AUTO', 
+                export_texture_dir='', 
+                export_keep_originals=False, 
+                export_texcoords=True, 
+                export_normals=True, 
+                #export_draco_mesh_compression_enable=False, 
+                #export_draco_mesh_compression_level=6, 
+                #export_draco_position_quantization=14, 
+                #export_draco_normal_quantization=10, 
+                #export_draco_texcoord_quantization=12, 
+                #export_draco_color_quantization=10, 
+                #export_draco_generic_quantization=12, 
+                export_tangents = scene_props.export_tangent,
+                export_materials='EXPORT', 
+                export_colors = scene_props.export_vcols,
+                use_mesh_edges=False, 
+                use_mesh_vertices=False, 
+                export_cameras=False, 
+                #export_selected=True, 
+                use_selection=True, 
+                use_visible=False, 
+                use_renderable=False, 
+                use_active_collection=False, 
+                export_extras=False, 
+                export_yup=True, 
+                export_apply = scene_props.apply_modifiers,
+                export_animations = scene_props.export_animations,
+                export_frame_range=True, 
+                export_frame_step=1, 
+                export_force_sampling=True, 
+                export_nla_strips = scene_props.export_animations, 
+                export_def_bones=False, 
+                export_optimize_animation_size=True,
+                export_current_frame=False, 
+                export_skins=True, 
+                export_all_influences=False, 
+                export_morph=True, 
+                export_morph_normal=True, 
+                export_morph_tangent=False, 
+                export_lights=False, 
+                #export_displacement=False, 
+                #will_save_settings=False, 
+                #filter_glob='*.glb;*.gltf'
+                )
 
         # Delete exported objects
         bpy.ops.object.delete()

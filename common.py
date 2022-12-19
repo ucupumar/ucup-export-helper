@@ -115,6 +115,7 @@ def merge_vg(obj, vg1_name, vg2_name):
 
 def make_root_constraint(context, rigify_object, export_rig_object):
 
+    ori_mode = context.object.mode
     scene = context.scene
 
     # Goto object mode, deselect all and select the rig
@@ -139,10 +140,18 @@ def make_root_constraint(context, rigify_object, export_rig_object):
     # Revert rigify pose
     rigify_object.data.pose_position = 'POSE'
 
+    # Back to original mode
+    if context.object.mode != ori_mode:
+        bpy.ops.object.mode_set(mode=ori_mode)
+
 def make_constraint(context, rig_object, export_rig_object):
 
+    ori_mode = context.object.mode
+
     # Deselect all and select the rig
-    bpy.ops.object.select_all(action='DESELECT')
+    if context.object.mode == 'OBJECT':
+        bpy.ops.object.select_all(action='DESELECT')
+
     set_active(export_rig_object)
     select_set(export_rig_object, True)
 
@@ -171,8 +180,9 @@ def make_constraint(context, rig_object, export_rig_object):
         pose_bones[bone.name].constraints["Copy Scale"].target_space = 'LOCAL_WITH_PARENT'
         pose_bones[bone.name].constraints["Copy Scale"].owner_space = 'WORLD'
     
-    # Back to object mode
-    bpy.ops.object.mode_set(mode='OBJECT')
+    # Back to original mode
+    if context.object.mode != ori_mode:
+        bpy.ops.object.mode_set(mode=ori_mode)
 
     # Root constraint is really special case
     make_root_constraint(context, rig_object, export_rig_object)
