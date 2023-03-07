@@ -978,6 +978,9 @@ class BONE_PT_ue4_helper(bpy.types.Panel):
             return
         arm = bpy.context.object.data
         bone = arm.bones.get(bone.name)
+        if not bone:
+            self.layout.label(text='No active bone!')
+            return
         props = bone.ue4h_props
         c = self.layout.column()
         c.active = not bone.use_deform
