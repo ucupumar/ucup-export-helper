@@ -41,9 +41,14 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
         #print(locals())
         #print(export_dae.DaeExporter)
 
+        # Get all possible objects
+        objects = [o for o in context.selected_objects]
+        if context.object and context.object not in objects:
+            objects.append(context.object)
+
         # Evaluate selected objects to export
         rig_object, mesh_objects, failed_mesh_objects, error_messages = evaluate_and_get_source_data(
-                context.scene, context.selected_objects)
+                context.scene, objects)
 
         # If valid mesh isn't found
         #if not mesh_objects:
