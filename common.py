@@ -360,6 +360,7 @@ def extract_export_meshes(context, mesh_objects, export_rig_ob, scale, only_expo
         #bpy.ops.object.duplicate()
 
         #new_obj = scene.objects.active
+        obj_props = obj.gr_props
 
         new_obj = obj.copy()
         new_obj.data = new_obj.data.copy()
@@ -400,6 +401,21 @@ def extract_export_meshes(context, mesh_objects, export_rig_ob, scale, only_expo
 
         select_set(obj, False)
         select_set(new_obj, False)
+
+        # Create extra objects with cleared locations
+        extra_obj = None
+        if obj_props.add_clear_location_duplicate:
+            extra_obj = new_obj.copy()
+            extra_obj.data = extra_obj.data.copy()
+            link_object(scene, extra_obj)
+
+            select_set(extra_obj, True)
+            set_active(extra_obj)
+            export_objs.append(extra_obj)
+
+            bpy.ops.object.location_clear(clear_delta=False)
+
+        if extra_obj: select_set(extra_obj, False)
 
     # Apply transform to exported rig and mesh
     #bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')

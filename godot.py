@@ -396,8 +396,28 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
             row.label(text='GLTF Format:')
             row.prop(scene_props, 'gltf_format', text='')
 
+            # For object settings
+            subbox = box.box()
+            subcol = subbox.column(align=False)
+            obj = context.object
+            obj_props = obj.gr_props
+            obj_name = obj.name if obj else '-'
+
+            r = subcol.row()
+            rr = r.row(align=True)
+            if scene_props.show_object_export_options: rr.alert = True
+            icon = 'PREFERENCES' # if is_greater_than_280() else 'SCRIPTWIN'
+            rr.operator('scene.toggle_godot_rigify_options', text='', icon=icon).prop = 'show_object_export_options'
+
+            r.label(text='Object Settings (' + obj_name + ')')
+
+            if scene_props.show_object_export_options:
+                ssubbox = subcol.box()
+                ssubbox.prop(obj_props, 'add_clear_location_duplicate')
+
 class SceneGodotRigifyProps(bpy.types.PropertyGroup):
     show_rig_export_options : BoolProperty(default=False)
+    show_object_export_options : BoolProperty(default=False)
 
     export_animations : BoolProperty(default=True, 
             name='Export Animations', description='Export all animations, except whose name ends  with -noexp')
@@ -438,16 +458,23 @@ class SceneGodotRigifyProps(bpy.types.PropertyGroup):
                 ),
             default = 'GLTF_EMBEDDED')
 
+class ObjectGodotRigifyProps(bpy.types.PropertyGroup):
+    add_clear_location_duplicate : BoolProperty(default=False,
+            name='Duplicate with Clear Location', description='Duplicate object with cleared location (useful for softbody attachment)')
+
 def register():
     bpy.utils.register_class(ExportRigifyGLTF)
     bpy.utils.register_class(ToggleGodotRigifyOptions)
     bpy.utils.register_class(GODOTHELPER_PT_RigifySkeletonPanel)
     bpy.utils.register_class(SceneGodotRigifyProps)
+    bpy.utils.register_class(ObjectGodotRigifyProps)
 
     bpy.types.Scene.gr_props = PointerProperty(type=SceneGodotRigifyProps)
+    bpy.types.Object.gr_props = PointerProperty(type=ObjectGodotRigifyProps)
 
 def unregister():
     bpy.utils.unregister_class(ExportRigifyGLTF)
     bpy.utils.unregister_class(ToggleGodotRigifyOptions)
     bpy.utils.unregister_class(GODOTHELPER_PT_RigifySkeletonPanel)
     bpy.utils.unregister_class(SceneGodotRigifyProps)
+    bpy.utils.unregister_class(ObjectGodotRigifyProps)
