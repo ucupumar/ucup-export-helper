@@ -1,4 +1,4 @@
-import bpy, sys
+import bpy, sys, time
 from bpy.props import *
 from mathutils import *
 from bpy_extras.io_utils import (ExportHelper,
@@ -7,22 +7,6 @@ from bpy_extras.io_utils import (ExportHelper,
                                  axis_conversion,
                                  ) 
 from .common import *
-
-#class ExportRigifyActionGLTF(bpy.types.Operator, ExportHelper):
-#    bl_idname = "export_mesh.rigify_action_gltf"
-#    bl_label = "Export Rigify Action"
-#    bl_description = "Export rigify active action as GLTF file"
-#    bl_options = {'REGISTER', 'UNDO'}
-#    filename_ext = ".gltf"
-#    filter_glob : StringProperty(default="*.gltf", options={'HIDDEN'})
-#
-#    @classmethod
-#    def poll(cls, context):
-#        return get_current_armature_object()
-#
-#    def execute(self, context):
-#        print('Kentyrsx')
-#        return {'FINISHED'}
 
 def export_gltf(filepath, scene_props):
     bpy.ops.export_scene.gltf(
@@ -65,6 +49,7 @@ def export_gltf(filepath, scene_props):
             export_nla_strips = scene_props.export_animations,
             export_def_bones=False, 
             export_optimize_animation_size=True,
+            export_anim_single_armature=False,
             export_current_frame=False, 
             export_skins=True, 
             export_all_influences=False, 
@@ -77,6 +62,53 @@ def export_gltf(filepath, scene_props):
             #filter_glob='*.glb;*.gltf'
             )
 
+class ExportRigifyAsSeparatedGLTF(bpy.types.Operator, ExportHelper):
+    bl_idname = "export_mesh.rigify_separated_gltf"
+    bl_label = "Export Rigify with separated action GLTF"
+    bl_description = "Export rigify with action as separated GLTF file"
+    bl_options = {'REGISTER', 'UNDO'}
+    filename_ext = ".gltf"
+    filter_glob : StringProperty(default="*.gltf", options={'HIDDEN'})
+
+    @classmethod
+    def poll(cls, context):
+        return get_current_armature_object()
+
+    def execute(self, context):
+
+        scene_props = context.scene.gr_props
+
+        # Get all possible objects
+        objects = [o for o in context.selected_objects]
+        if context.object and context.object not in objects:
+            objects.append(context.object)
+
+        # Evaluate selected objects to export
+        rig_object, mesh_objects, failed_mesh_objects, error_messages = evaluate_and_get_source_data(
+                context.scene, objects, False)
+
+        # If found error
+        if error_messages != '':
+            self.report({'ERROR'}, error_messages)
+            state.load(context)
+            return{'CANCELLED'}
+
+        # Get actions
+        actions = [a for a in bpy.data.actions if a.rigify_export_props.enable_export]
+
+        # Enable only selection action temporarily
+        scene_props.export_only_selected_action = True
+
+        # Load actions to object
+        for action in actions:
+            rig_object.animation_data.action = action
+            bpy.ops.export_mesh.rigify_gltf()
+
+        # Recover only selected action
+        scene_props.export_only_selected_action = False
+
+        return {'FINISHED'}
+
 class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
     bl_idname = "export_mesh.rigify_gltf"
     bl_label = "Export Godot Skeleton"
@@ -84,6 +116,8 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
     bl_options = {'REGISTER', 'UNDO'}
     filename_ext = ".gltf"
     filter_glob : StringProperty(default="*.gltf", options={'HIDDEN'})
+
+    #custom_directory = StringProperty(default='')
 
     @classmethod
     def poll(cls, context):
@@ -112,6 +146,8 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
 
     def execute(self, context):
 
+        T = time.time()
+
         scene_props = context.scene.gr_props
 
         # Create save system to save current selection, mode, and active object
@@ -129,8 +165,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
         rig_object, mesh_objects, failed_mesh_objects, error_messages = evaluate_and_get_source_data(
                 context.scene, objects, use_export_meshes)
 
-        # If valid mesh isn't found
-        #if not mesh_objects:
+        # If found error
         if error_messages != '':
             self.report({'ERROR'}, error_messages)
             state.load(context)
@@ -213,7 +248,6 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
 
         # To store actions
         actions = []
-        skipped_actions = []
         baked_actions = []
 
         # Go to pose mode
@@ -226,6 +260,11 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
             if scene_props.export_only_selected_action:
                 actions = [rig_object.animation_data.action]
             else: actions = [a for a in bpy.data.actions if a.rigify_export_props.enable_export]
+
+            # Remove already available tracks
+            if export_rig_ob.animation_data and len(export_rig_ob.animation_data.nla_tracks) > 0:
+                for track in reversed(export_rig_ob.animation_data.nla_tracks):
+                    export_rig_ob.animation_data.nla_tracks.remove(track)
 
             # Bake all valid actions
             for action in actions:
@@ -277,18 +316,33 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                 if not baked_action.name.endswith('-loop') and action_props.enable_loop:
                     baked_action.name += '-loop'
 
+                # Dealing with separated GLTFs
+                if scene_props.export_action_as_separated_gltf and not scene_props.export_only_selected_action:
+                    # Add nla track for the baked action
+                    track = export_rig_ob.animation_data.nla_tracks.new()
+                    strip = track.strips.new(baked_action.name, int(baked_action.frame_start), baked_action)
+
+                    # Set the filepath based on action name
+                    directory = os.path.dirname(context.blend_data.filepath)
+                    filepath = os.path.join(directory, action_name + '.gltf')
+
+                    # Export action as gltf file
+                    bpy.ops.object.mode_set(mode='OBJECT')
+                    export_gltf(filepath, scene_props)
+                    bpy.ops.object.mode_set(mode='POSE')
+
+                    # Remove nla track
+                    track = export_rig_ob.animation_data.nla_tracks[0]
+                    export_rig_ob.animation_data.nla_tracks.remove(track)
+
                 # Remember baked actions so it can be removed later
                 baked_actions.append(baked_action)
 
                 # Set active action back to None
                 export_rig_ob.animation_data.action = None
 
-        if baked_actions:
-
-            # Remove already available tracks
-            if len(export_rig_ob.animation_data.nla_tracks) > 0:
-                for track in reversed(export_rig_ob.animation_data.nla_tracks):
-                    export_rig_ob.animation_data.nla_tracks.remove(track)
+        # Only add baked actions to NLA if not using separated gltf
+        if baked_actions and (scene_props.export_only_selected_action or not scene_props.export_action_as_separated_gltf):
 
             # Add baked action to NLA tracks
             for ba in baked_actions:
@@ -303,7 +357,9 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
             select_set(obj, True)
 
         ## EXPORT!
-        export_gltf(self.filepath, scene_props)
+        # No need to export if there's no meshes or actions
+        if any(export_mesh_objs) or (export_rig_ob.animation_data and any(export_rig_ob.animation_data.nla_tracks)):
+            export_gltf(self.filepath, scene_props)
 
         # Delete exported objects
         bpy.ops.object.delete()
@@ -313,9 +369,6 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
             bpy.data.actions.remove(action)
 
         # Recover original action names
-        #actions.extend(skipped_actions)
-        #for action in actions:
-        #    action.name = action.name[:-6]
         for action in bpy.data.actions:
             if action.name.endswith('__TEMP__'):
                 action.name = action.name[:-8]
@@ -374,6 +427,8 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
             
             self.report({'INFO'}, "INFO: Cannot export object [" + obj_names + "] because of reasons")
 
+        print('INFO:', 'Export finished at', '{:0.2f}'.format(time.time() - T), 'seconds!')
+
         return {'FINISHED'}
 
 class ToggleGodotRigifyOptions(bpy.types.Operator):
@@ -411,6 +466,9 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
 
         c = self.layout.column(align=True)
         r = c.row(align=True)
+        #if scene_props.export_animations and scene_props.export_action_as_separated_gltf and not scene_props.export_only_selected_action:
+        #    r.operator('export_mesh.rigify_separated_gltf', text='Export as GLTF', icon='MOD_ARMATURE')
+        #else: 
         r.operator('export_mesh.rigify_gltf', text='Export as GLTF', icon='MOD_ARMATURE')
 
         if scene_props.show_rig_export_options: r.alert = True
@@ -421,11 +479,13 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
             box = c.box()
             col = box.column(align=True)
 
-            use_export_meshes = scene_props.export_meshes and not (
-                    scene_props.export_animations and scene_props.export_only_selected_action)
+            use_export_meshes_visible = not ( scene_props.export_animations and 
+                    scene_props.export_only_selected_action)
+                    #(scene_props.export_only_selected_action or scene_props.export_action_as_separated_gltf))
+            use_export_meshes = scene_props.export_meshes and use_export_meshes_visible
 
             row = col.row()
-            row.active = not (scene_props.export_animations and scene_props.export_only_selected_action)
+            row.active = use_export_meshes_visible
             row.prop(scene_props, 'export_meshes')
 
             col.prop(scene_props, 'export_animations')
@@ -434,9 +494,9 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
             row.active = scene_props.export_animations
             row.prop(scene_props, 'export_only_selected_action')
 
-            #row = col.row()
-            #row.active = scene_props.export_animations and not scene_props.export_only_selected_action
-            #row.prop(scene_props, 'export_action_as_separated_gltf')
+            row = col.row()
+            row.active = scene_props.export_animations and not scene_props.export_only_selected_action
+            row.prop(scene_props, 'export_action_as_separated_gltf')
 
             col = box.column(align=True)
             col.active = use_export_meshes
@@ -501,8 +561,8 @@ class SceneGodotRigifyProps(bpy.types.PropertyGroup):
     export_only_selected_action : BoolProperty(default=False, 
             name='Export Only Selected Action', description='Export only selected animation')
 
-    #export_action_as_separated_gltf : BoolProperty(default=False,
-    #        name='Export Actions as separated GLTF', description='Export action(s) as separated GLTF')
+    export_action_as_separated_gltf : BoolProperty(default=False,
+            name='Export Actions as separated GLTF', description='Export action(s) as separated GLTF')
 
     apply_modifiers : BoolProperty(default=True, 
             name='Apply Modifiers', description='Apply all modifiers')
@@ -546,7 +606,7 @@ class ObjectGodotRigifyProps(bpy.types.PropertyGroup):
 
 def register():
     bpy.utils.register_class(ExportRigifyGLTF)
-    #bpy.utils.register_class(ExportRigifyActionGLTF)
+    bpy.utils.register_class(ExportRigifyAsSeparatedGLTF)
     bpy.utils.register_class(ToggleGodotRigifyOptions)
     bpy.utils.register_class(GODOTHELPER_PT_RigifySkeletonPanel)
     bpy.utils.register_class(SceneGodotRigifyProps)
@@ -557,7 +617,7 @@ def register():
 
 def unregister():
     bpy.utils.unregister_class(ExportRigifyGLTF)
-    #bpy.utils.unregister_class(ExportRigifyActionGLTF)
+    bpy.utils.unregister_class(ExportRigifyAsSeparatedGLTF)
     bpy.utils.unregister_class(ToggleGodotRigifyOptions)
     bpy.utils.unregister_class(GODOTHELPER_PT_RigifySkeletonPanel)
     bpy.utils.unregister_class(SceneGodotRigifyProps)
