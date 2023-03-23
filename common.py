@@ -465,7 +465,7 @@ def unparent_ik_related_bones(use_humanoid_name, rigify_obj, export_rig_obj):
     # Back to object mode
     bpy.ops.object.mode_set(mode='OBJECT')
 
-def evaluate_and_get_source_data(scene, objects):
+def evaluate_and_get_source_data(scene, objects, use_export_meshes=True):
 
     rig_object = None
     mesh_objects = []
@@ -535,42 +535,44 @@ def evaluate_and_get_source_data(scene, objects):
     #                rig_object = [ob for ob in scene.objects if ob.data == o.data]
     #                if rig_object: rig_object = rig_object[0]
 
-    # Get mesh objects that using rig object
-    if rig_object:
-        for o in scene.objects:
-            if o.ue4h_props.disable_export: continue
+    if use_export_meshes:
 
-            # Search for modifier using rig object
-            if o.type == 'MESH':
-                for mod in o.modifiers:
-                    if mod.type == 'ARMATURE' and mod.object == rig_object:
-                        mesh_objects.append(o)
-                        break
+        # Get mesh objects that using rig object
+        if rig_object:
+            for o in scene.objects:
+                if o.ue4h_props.disable_export: continue
 
-            # If object is linked pass dupli_group
-            icol = get_instance_collection(o)
-            if icol:
-                for ob in icol.objects:
-                    print(ob)
-                    for mod in ob.modifiers:
-                        if mod.type == 'ARMATURE' and mod.object and mod.object.data == rig_object.data:
-                            mesh_objects.append(ob)
-                    #if ob.data == rig_object.data:
-                    #    dupli_group = o.dupli_group
-                    #    break
+                # Search for modifier using rig object
+                if o.type == 'MESH':
+                    for mod in o.modifiers:
+                        if mod.type == 'ARMATURE' and mod.object == rig_object:
+                            mesh_objects.append(o)
+                            break
 
-    #if dupli_group:
-    #    for o in dupli_group.objects:
-    #        pass
+                # If object is linked pass dupli_group
+                icol = get_instance_collection(o)
+                if icol:
+                    for ob in icol.objects:
+                        #print(ob)
+                        for mod in ob.modifiers:
+                            if mod.type == 'ARMATURE' and mod.object and mod.object.data == rig_object.data:
+                                mesh_objects.append(ob)
+                        #if ob.data == rig_object.data:
+                        #    dupli_group = o.dupli_group
+                        #    break
 
-    # Check failed meshes
-    for o in objects:
-        if o.type == 'MESH' and o not in mesh_objects:
-            failed_mesh_objects.append(o)
-    
-    # If not found any mesh to be export
-    if not(mesh_objects): # and not dupli_group:
-        error_messages = "FAILED! No objects valid to export! Make sure your armature modifiers are properly set."
+        #if dupli_group:
+        #    for o in dupli_group.objects:
+        #        pass
+
+        # Check failed meshes
+        for o in objects:
+            if o.type == 'MESH' and o not in mesh_objects:
+                failed_mesh_objects.append(o)
+        
+        # If not found any mesh to be export
+        if not(mesh_objects): # and not dupli_group:
+            error_messages = "FAILED! No objects valid to export! Make sure your armature modifiers are properly set."
 
     return rig_object, mesh_objects, failed_mesh_objects, error_messages
 
