@@ -323,7 +323,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                     strip = track.strips.new(baked_action.name, int(baked_action.frame_start), baked_action)
 
                     # Set the filepath based on action name
-                    directory = os.path.dirname(context.blend_data.filepath)
+                    directory = os.path.dirname(self.filepath)
                     filepath = os.path.join(directory, action_name + '.gltf')
 
                     # Export action as gltf file
