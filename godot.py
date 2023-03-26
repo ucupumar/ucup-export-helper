@@ -80,8 +80,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
 
         scene_props = context.scene.gr_props
 
-        self.filepath = ''
-        directory = os.path.dirname(context.blend_data.filepath)
+        directory = os.path.dirname(self.filepath)
         filename = os.path.splitext(os.path.basename(context.blend_data.filepath))[0]
         suffix = ''
 
