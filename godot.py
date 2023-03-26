@@ -55,7 +55,7 @@ def export_gltf(filepath, scene_props):
             export_all_influences=False, 
             export_morph=True, 
             export_morph_normal=True, 
-            export_morph_tangent=False, 
+            export_morph_tangent=True, 
             export_lights=False, 
             #export_displacement=False, 
             #will_save_settings=False, 

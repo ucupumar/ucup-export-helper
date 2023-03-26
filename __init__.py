@@ -1,6 +1,6 @@
 bl_info = {
     "name": "Ucup Export Helper",
-    "author": "Yusuf Umar",
+    "author": "Yusuf Umar, Przemysław Bągard",
     "version": (0, 0, 0),
     "blender": (3, 4, 0),
     "location": "View 3D > Tool Shelf > Ucup Exporter",
