@@ -680,7 +680,10 @@ def reset_pose_bones(obj):
             if not pb.lock_location[i]:
                 pb.location[i] = 0.0
 
-def remove_non_transformed_keyframes(action, ignore_object_transform=True, ignore_root=True):
+def equal_float(value0, value1, tolerance):
+    return value0 >= value1 - tolerance and value0 <= value1 + tolerance 
+
+def remove_non_transformed_keyframes(action, ignore_object_transform=True, ignore_root=True, tolerance=0.0):
 
     msgs = []
 
@@ -700,24 +703,29 @@ def remove_non_transformed_keyframes(action, ignore_object_transform=True, ignor
             #print(keyframe.co)
 
             if fcurve.data_path.endswith('location'):
-                if keyframe.co[1] != 0.0:
+                #if keyframe.co[1] != 0.0:
+                if not equal_float(keyframe.co[1], 0.0, tolerance):
                     transformed_key_found = True
                     break
             elif fcurve.data_path.endswith('rotation_quaternion'):
                 if fcurve.array_index == 0:
-                    if keyframe.co[1] != 1.0:
+                    #if keyframe.co[1] != 1.0:
+                    if not equal_float(keyframe.co[1], 1.0, tolerance):
                         transformed_key_found = True
                         break
                 else:
-                    if keyframe.co[1] != 0.0:
+                    #if keyframe.co[1] != 0.0:
+                    if not equal_float(keyframe.co[1], 0.0, tolerance):
                         transformed_key_found = True
                         break
             elif fcurve.data_path.endswith('rotation_euler'):
-                if keyframe.co[1] != 0.0:
+                #if keyframe.co[1] != 0.0:
+                if not equal_float(keyframe.co[1], 0.0, tolerance):
                     transformed_key_found = True
                     break
             elif fcurve.data_path.endswith('scale'):
-                if keyframe.co[1] != 1.0:
+                #if keyframe.co[1] != 1.0:
+                if not equal_float(keyframe.co[1], 1.0, tolerance):
                     transformed_key_found = True
                     break
 

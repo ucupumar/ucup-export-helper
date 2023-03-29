@@ -152,6 +152,12 @@ class YRemoveNonTransformativeFrames(bpy.types.Operator):
             default = True
             )
 
+    tolerance : FloatProperty(
+            name = 'Tolerance',
+            description = 'Tolerance value for keyframes',
+            default = 0.0001
+            )
+
     @classmethod
     def poll(cls, context):
         return get_current_armature_object()
@@ -164,6 +170,7 @@ class YRemoveNonTransformativeFrames(bpy.types.Operator):
         self.layout.prop(self, 'remove_nlas')
         self.layout.prop(self, 'ignore_root')
         self.layout.prop(self, 'ignore_object_transform')
+        self.layout.prop(self, 'tolerance')
 
     def execute(self, context):
 
@@ -181,10 +188,13 @@ class YRemoveNonTransformativeFrames(bpy.types.Operator):
 
         for action in actions:
 
-            msgs = remove_non_transformed_keyframes(action, self.ignore_object_transform, self.ignore_root)
+            msgs = remove_non_transformed_keyframes(action, self.ignore_object_transform, self.ignore_root, self.tolerance)
 
             for msg in msgs:
                 self.report({'INFO'}, msg)
+
+            if len(msgs) > 0:
+                self.report({'INFO'}, "Total fcurves removed: " + str(len(msgs)))
 
         # Remove NLA tracks
         if self.remove_nlas:
@@ -313,6 +323,10 @@ def draw_action_manager(self, context):
                 brow = bcol.row()
                 brow.active = (not action.use_frame_range) # and action_props.enable_loop
                 brow.prop(action_props, 'enable_skip_last_frame')
+
+            bcol.prop(action_props, 'enable_remove_untransformed', text='Remove Untransformed')
+            if action_props.enable_remove_untransformed:
+                bcol.prop(action_props, 'untransformed_tolerance', text='Tolerance')
 
     r = col.row()
     rr = r.row()
@@ -520,6 +534,18 @@ class YActionRigifyExportActionProps(bpy.types.PropertyGroup):
             description = 'Enable skip the last frame (only works on Godot for now)',
             default = True,
             update=update_frame_range)
+
+    enable_remove_untransformed : BoolProperty(
+            name = 'Remove untransformed Fcurves (Export)',
+            description = 'remove untransformed fcurves at export',
+            default = False
+            )
+
+    untransformed_tolerance : FloatProperty(
+            name = 'Untransformed Keyframe Tolerance (Export)',
+            description = 'Untransformed keyframe tolerance',
+            default = 0.0001
+            )
 
 def register():
     bpy.utils.register_class(YNewAction)

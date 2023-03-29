@@ -281,6 +281,9 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                 if not baked_action.name.endswith('-loop') and action_props.enable_loop:
                     baked_action.name += '-loop'
 
+                if action_props.enable_remove_untransformed:
+                    remove_non_transformed_keyframes(baked_action, tolerance=action_props.untransformed_tolerance)
+
                 # Dealing with separated GLTFs
                 if scene_props.export_action_as_separated_gltf and not scene_props.export_only_selected_action:
                     # Add nla track for the baked action
