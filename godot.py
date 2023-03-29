@@ -78,6 +78,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
 
     def invoke(self, context, event):
 
+        obj =  get_current_armature_object()
         scene_props = context.scene.gr_props
 
         directory = os.path.dirname(self.filepath)
@@ -86,7 +87,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
 
         if scene_props.export_animations:
             if scene_props.export_only_selected_action:
-                try: action = context.object.animation_data.action
+                try: action = obj.animation_data.action
                 except: action = None
 
                 if action:
