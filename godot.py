@@ -238,6 +238,8 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
 
                 # Reset all bone transformations first
                 reset_pose_bones(rig_object)
+                if context.scene.rigify_export_props.sync_rigify_props:
+                    reset_pose_bone_props(rig_object, context.scene, action)
 
                 # Set active action
                 rig_object.animation_data.action = action
