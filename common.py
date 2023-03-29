@@ -659,6 +659,73 @@ def move_root(scene, obj):
     set_active(obj)
     select_set(obj, True)
 
+def reset_pose_bone_props(obj, scene, action):
+    scene_props = scene.rigify_export_props
+
+    arm_l_follow_found = False
+    arm_r_follow_found = False
+    leg_l_follow_found = False
+    leg_r_follow_found = False
+
+    hand_l_ik_found = False
+    hand_r_ik_found = False
+    foot_l_ik_found = False
+    foot_r_ik_found = False
+
+    for fcurve in action.fcurves:
+
+        if fcurve.data_path == 'pose.bones["upper_arm_parent.L"]["FK_limb_follow"]':
+            arm_l_follow_found = True
+        elif fcurve.data_path == 'pose.bones["upper_arm_parent.R"]["FK_limb_follow"]':
+            arm_r_follow_found = True
+
+        elif fcurve.data_path == 'pose.bones["thigh_parent.L"]["FK_limb_follow"]':
+            leg_l_follow_found = True
+        elif fcurve.data_path == 'pose.bones["thigh_parent.R"]["FK_limb_follow"]':
+            leg_r_follow_found = True
+
+        elif fcurve.data_path == 'pose.bones["upper_arm_parent.L"]["IK_FK"]':
+            hand_l_ik_found = True
+        elif fcurve.data_path == 'pose.bones["upper_arm_parent.R"]["IK_FK"]':
+            hand_r_ik_found = True
+
+        elif fcurve.data_path == 'pose.bones["thigh_parent.L"]["IK_FK"]':
+            foot_l_ik_found = True
+        elif fcurve.data_path == 'pose.bones["thigh_parent.R"]["IK_FK"]':
+            foot_r_ik_found = True
+
+    if not arm_l_follow_found:
+        try: obj.pose.bones["upper_arm_parent.L"]["FK_limb_follow"] = 1.0 if scene_props.default_arm_follow else 0.0
+        except Exception as e: print(e)
+
+    if not arm_r_follow_found:
+        try: obj.pose.bones["upper_arm_parent.R"]["FK_limb_follow"] = 1.0 if scene_props.default_arm_follow else 0.0
+        except Exception as e: print(e)
+
+    if not leg_l_follow_found:
+        try: obj.pose.bones["thigh_parent.L"]["FK_limb_follow"] = 1.0 if scene_props.default_arm_follow else 0.0
+        except Exception as e: print(e)
+
+    if not leg_r_follow_found:
+        try: obj.pose.bones["thigh_parent.R"]["FK_limb_follow"] = 1.0 if scene_props.default_arm_follow else 0.0
+        except Exception as e: print(e)
+
+    if not hand_l_ik_found:
+        try: obj.pose.bones["upper_arm_parent.L"]["IK_FK"] = 0.0 if scene_props.default_hand_ik else 1.0
+        except Exception as e: print(e)
+
+    if not hand_r_ik_found:
+        try: obj.pose.bones["upper_arm_parent.R"]["IK_FK"] = 0.0 if scene_props.default_hand_ik else 1.0
+        except Exception as e: print(e)
+
+    if not foot_l_ik_found:
+        try: obj.pose.bones["thigh_parent.L"]["IK_FK"] = 0.0 if scene_props.default_foot_ik else 1.0
+        except Exception as e: print(e)
+
+    if not foot_r_ik_found:
+        try: obj.pose.bones["thigh_parent.R"]["IK_FK"] = 0.0 if scene_props.default_foot_ik else 1.0
+        except Exception as e: print(e)
+
 def reset_pose_bones(obj):
     for pb in obj.pose.bones:
 

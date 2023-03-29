@@ -343,9 +343,18 @@ def draw_action_manager(self, context):
         box = col.box()
         bcol = box.column()
 
-        bcol.prop(scene_props, 'sync_unkeyframed_bones')
         bcol.prop(scene_props, 'sync_frames')
         bcol.prop(scene_props, 'sync_bone_layers')
+        bcol.prop(scene_props, 'sync_unkeyframed_bones')
+        bcol.prop(scene_props, 'sync_rigify_props')
+
+        if scene_props.sync_rigify_props:
+            bbox = bcol.box()
+            bbcol = bbox.column(align=True)
+            bbcol.prop(scene_props, 'default_hand_ik')
+            bbcol.prop(scene_props, 'default_foot_ik')
+            bbcol.prop(scene_props, 'default_arm_follow')
+            bbcol.prop(scene_props, 'default_leg_follow')
 
 class UE4HELPER_PT_item_RigifyExportActionPanel(bpy.types.Panel):
     bl_label = "Action Manager"
@@ -457,6 +466,11 @@ def update_action(self, context):
 
         reset_pose_bones(obj)
 
+    # Reset bone props
+    if scene_props.sync_rigify_props:
+
+        reset_pose_bone_props(obj, context.scene, action)
+
     # Set action
     if not obj.animation_data:
         obj.animation_data_create()
@@ -503,13 +517,43 @@ class YSceneRigifyExportActionProps(bpy.types.PropertyGroup):
     sync_frames : BoolProperty(
             name = 'Sync Frames',
             description = 'Sync frame start and end when active action changes',
-            default = True
+            default = False
             )
 
     sync_unkeyframed_bones : BoolProperty(
             name = 'Sync Unkeyframed Bones',
             description = 'Clear unkeyframed bones when changing action',
+            default = False
+            )
+
+    sync_rigify_props : BoolProperty(
+            name = 'Sync Unkeyframed Rigify Props',
+            description = 'Clear unkeyframed rigify properties when changing action',
+            default = False
+            )
+
+    default_hand_ik : BoolProperty(
+            name = 'Default Hand IK',
+            description = 'Use IK if Hand IK/FK switch is not keyframed',
+            default = False
+            )
+
+    default_foot_ik : BoolProperty(
+            name = 'Default Foot IK',
+            description = 'Use IK if Foot IK/FK switch is not keyframed',
             default = True
+            )
+
+    default_arm_follow : BoolProperty(
+            name = 'Default Arm Follow',
+            description = 'Use Arm Limb Follow if its not keyframed',
+            default = False
+            )
+
+    default_leg_follow : BoolProperty(
+            name = 'Default Leg Follow',
+            description = 'Use Leg Limb Follow if its not keyframed',
+            default = False
             )
 
 class YWMRigifyExportActionProps(bpy.types.PropertyGroup):
