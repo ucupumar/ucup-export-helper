@@ -1,6 +1,8 @@
 import bpy, os, time
 from mathutils import *
 
+TEMP_SUFFIX = '__TEMP__'
+
 def is_greater_than_280():
     if bpy.app.version >= (2, 80, 0):
         return True
@@ -353,22 +355,19 @@ def extract_export_meshes(context, mesh_objects, export_rig_ob, scale, only_expo
     # Duplicate Meshes
     export_objs = []
     for obj in mesh_objects:
-        #print(obj.name)
-        #select_set(obj, True)
-        #scene.objects.active = obj
-
-        #bpy.ops.object.duplicate()
 
         #new_obj = scene.objects.active
         obj_props = obj.gr_props
+        obj_name = obj.name
+        obj.name += TEMP_SUFFIX
 
         new_obj = obj.copy()
         new_obj.data = new_obj.data.copy()
+        new_obj.name = obj_name
         link_object(scene, new_obj)
 
         # New objects scaling
         #if new_obj.parent != rig_object:
-        #    print('aaaaaaaa')
         #    new_obj.scale *= scale
 
         # Select this mesh
@@ -411,26 +410,11 @@ def extract_export_meshes(context, mesh_objects, export_rig_ob, scale, only_expo
         select_set(obj, False)
         select_set(new_obj, False)
 
-        # Create extra objects with cleared locations
-        extra_obj = None
-        if obj_props.add_clear_location_duplicate:
-            extra_obj = new_obj.copy()
-            extra_obj.data = extra_obj.data.copy()
-            link_object(scene, extra_obj)
-
-            select_set(extra_obj, True)
-            set_active(extra_obj)
-            export_objs.append(extra_obj)
-
-            bpy.ops.object.location_clear(clear_delta=False)
-
-        if extra_obj: select_set(extra_obj, False)
-
     # Apply transform to exported rig and mesh
     #bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
     #bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
-    return export_objs
+    return export_objs 
 
 # Fuction for Unparent ik related bones (currrently for rigify only)
 def unparent_ik_related_bones(use_humanoid_name, rigify_obj, export_rig_obj):

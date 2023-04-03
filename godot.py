@@ -8,7 +8,7 @@ from bpy_extras.io_utils import (ExportHelper,
                                  ) 
 from .common import *
 
-def export_gltf(filepath, scene_props):
+def export_gltf(filepath, scene_props, export_materials='EXPORT'):
     bpy.ops.export_scene.gltf(
             filepath=filepath,
             #check_existing=True, 
@@ -29,7 +29,7 @@ def export_gltf(filepath, scene_props):
             #export_draco_color_quantization=10, 
             #export_draco_generic_quantization=12, 
             export_tangents = scene_props.export_tangent,
-            export_materials='EXPORT', 
+            export_materials=export_materials, 
             export_colors = scene_props.export_vcols,
             use_mesh_edges=False, 
             use_mesh_vertices=False, 
@@ -171,6 +171,47 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
         if use_export_meshes:
             export_mesh_objs = extract_export_meshes(context, mesh_objects, export_rig_ob, scale, scene_props.only_export_baked_vcols)
 
+        # Export extra objects first because it doesn't need materials or armature
+        for ob in export_mesh_objs:
+            if ob.gr_props.add_clear_location_duplicate:
+                set_active(ob)
+                select_set(ob, True)
+
+                # Remember things
+                ori_show_viewports = [m.show_viewport for m in ob.modifiers]
+                ori_show_renders = [m.show_render for m in ob.modifiers]
+                ori_location = ob.location.copy()
+
+                # Disable armature modifiers
+                for mod in ob.modifiers:
+                    if mod.type == 'ARMATURE':
+                        mod.show_viewport = False
+                        mod.show_render = False
+
+                # Clear location
+                bpy.ops.object.location_clear(clear_delta=False)
+
+                # Get filepath
+                directory = os.path.dirname(self.filepath)
+                filename = os.path.splitext(os.path.basename(self.filepath))[0]
+                filepath = os.path.join(directory, filename + ob.name + self.filename_ext)
+
+                # Export gltf
+                export_gltf(filepath, scene_props, 'PLACEHOLDER')
+
+                # Recover modifiers
+                for i, mod in enumerate(ob.modifiers):
+                    if ori_show_viewports[i]:
+                        mod.show_viewport = True
+                    if ori_show_renders[i]:
+                        mod.show_render = True
+
+                # Recover location
+                ob.location = ori_location
+
+                # Deselect object
+                select_set(ob, False)
+
         # Set ucupaint baked outside
         ori_not_use_baked = []
         ori_not_use_baked_outside = []
@@ -249,7 +290,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                 action_name = action.name
 
                 # Set active action name to use temporary name
-                action.name += '__TEMP__'
+                action.name += TEMP_SUFFIX
 
                 # Make constraint
                 make_constraint(context, rig_object, export_rig_ob)
@@ -347,8 +388,13 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
 
         # Recover original action names
         for action in bpy.data.actions:
-            if action.name.endswith('__TEMP__'):
-                action.name = action.name[:-8]
+            if action.name.endswith(TEMP_SUFFIX):
+                action.name = action.name[:-len(TEMP_SUFFIX)]
+
+        # Recover original mesh object names
+        for obj in bpy.data.objects:
+            if obj.name.endswith(TEMP_SUFFIX):
+                obj.name = obj.name[:-len(TEMP_SUFFIX)]
 
         # Descale original rig
         rig_object.scale /= scale
@@ -576,7 +622,7 @@ class SceneGodotRigifyProps(bpy.types.PropertyGroup):
 
 class ObjectGodotRigifyProps(bpy.types.PropertyGroup):
     add_clear_location_duplicate : BoolProperty(default=False,
-            name='Duplicate with Clear Location', description='Duplicate object with cleared location (useful for softbody attachment)')
+            name='Duplicate as Separated GLTF', description='Duplicate object as separated gltf with cleared location (useful for softbody attachment)')
 
 def register():
     bpy.utils.register_class(ExportRigifyGLTF)
