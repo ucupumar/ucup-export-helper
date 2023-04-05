@@ -194,6 +194,9 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                 # Get filepath
                 directory = os.path.dirname(self.filepath)
                 filename = os.path.splitext(os.path.basename(self.filepath))[0]
+                if ob.name.startswith(filename):
+                    filename = ''
+                else: filename += ' '
                 filepath = os.path.join(directory, filename + ob.name + self.filename_ext)
 
                 # Export gltf
