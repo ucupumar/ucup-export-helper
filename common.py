@@ -2,6 +2,7 @@ import bpy, os, time
 from mathutils import *
 
 TEMP_SUFFIX = '__TEMP__'
+COPY_SUFFIX = '.COPY'
 
 def is_greater_than_280():
     if bpy.app.version >= (2, 80, 0):
@@ -167,20 +168,26 @@ def make_constraint(context, rig_object, export_rig_object):
     for bone in bones:
         #pose_bones.active = bone
         bones.active = bone
+        bone_name = bone.name
+        target_bone_name = bone.name
+
+        # Dealing with bone with copy suffix
+        if bone_name.endswith(COPY_SUFFIX):
+            target_bone_name = target_bone_name.replace(COPY_SUFFIX, '')
         
         bpy.ops.pose.constraint_add(type="COPY_LOCATION")
         bpy.ops.pose.constraint_add(type="COPY_ROTATION")
         bpy.ops.pose.constraint_add(type="COPY_SCALE")
         
         # Add constraint target based by rig source object
-        pose_bones[bone.name].constraints["Copy Location"].target = rig_object
-        pose_bones[bone.name].constraints["Copy Location"].subtarget = bone.name
-        pose_bones[bone.name].constraints["Copy Rotation"].target = rig_object
-        pose_bones[bone.name].constraints["Copy Rotation"].subtarget = bone.name
-        pose_bones[bone.name].constraints["Copy Scale"].target = rig_object
-        pose_bones[bone.name].constraints["Copy Scale"].subtarget = bone.name
-        pose_bones[bone.name].constraints["Copy Scale"].target_space = 'LOCAL_WITH_PARENT'
-        pose_bones[bone.name].constraints["Copy Scale"].owner_space = 'WORLD'
+        pose_bones[bone_name].constraints["Copy Location"].target = rig_object
+        pose_bones[bone_name].constraints["Copy Location"].subtarget = target_bone_name
+        pose_bones[bone_name].constraints["Copy Rotation"].target = rig_object
+        pose_bones[bone_name].constraints["Copy Rotation"].subtarget = target_bone_name
+        pose_bones[bone_name].constraints["Copy Scale"].target = rig_object
+        pose_bones[bone_name].constraints["Copy Scale"].subtarget = target_bone_name
+        pose_bones[bone_name].constraints["Copy Scale"].target_space = 'LOCAL_WITH_PARENT'
+        pose_bones[bone_name].constraints["Copy Scale"].owner_space = 'WORLD'
     
     # Back to original mode
     if context.object.mode != ori_mode:
