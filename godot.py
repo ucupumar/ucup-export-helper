@@ -95,6 +95,9 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
             elif not scene_props.export_meshes:
                 suffix = '_anim'
 
+        if scene_props.remove_whitespaces:
+            filename = filename.replace(' ', '')
+
         self.filepath = os.path.join(directory, filename + suffix + self.filename_ext)
 
         context.window_manager.fileselect_add(self)
@@ -197,7 +200,13 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                 if ob.name.startswith(filename):
                     filename = ''
                 else: filename += ' '
-                filepath = os.path.join(directory, filename + ob.name + self.filename_ext)
+
+                filename += ob.name
+
+                if scene_props.remove_whitespaces:
+                    filename = filename.replace(' ', '')
+
+                filepath = os.path.join(directory, filename + self.filename_ext)
 
                 # Export gltf
                 export_gltf(filepath, scene_props, 'PLACEHOLDER')
@@ -339,7 +348,12 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
 
                     # Set the filepath based on action name
                     directory = os.path.dirname(self.filepath)
-                    filepath = os.path.join(directory, action_name + '.gltf')
+
+                    filename = action_name
+                    if scene_props.remove_whitespaces:
+                        filename = filename.replace(' ', '')
+
+                    filepath = os.path.join(directory, filename + '.gltf')
 
                     # Export action as gltf file
                     bpy.ops.object.mode_set(mode='OBJECT')
@@ -548,6 +562,8 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
             row.label(text='GLTF Format:')
             row.prop(scene_props, 'gltf_format', text='')
 
+            col.prop(scene_props, 'remove_whitespaces')
+
             # For object settings
             subbox = box.box()
             subcol = subbox.column(align=False)
@@ -622,6 +638,12 @@ class SceneGodotRigifyProps(bpy.types.PropertyGroup):
                 ('GLTF_SEPARATE', 'GLTF Separate', 'GLTF Separate'),
                 ),
             default = 'GLTF_EMBEDDED')
+
+    remove_whitespaces : bpy.props.BoolProperty(
+            name="Remove Whitespaces",
+            description="Remove whitespaces from saved names",
+            default=False
+            )
 
 class ObjectGodotRigifyProps(bpy.types.PropertyGroup):
     add_clear_location_duplicate : BoolProperty(default=False,
