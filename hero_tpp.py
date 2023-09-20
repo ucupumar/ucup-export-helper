@@ -35,11 +35,11 @@ def load_ue4_hero_tpp():
     mesh_name = 'HeroTPP'
 
     blendfile = get_addon_filepath() + 'lib.blend'
-    section   = "\\Object\\"
+    section   = "Object"
     object    = "HeroTPP"
     
-    filepath  = blendfile + section + object
-    directory = blendfile + section
+    directory = os.path.join(blendfile, section)
+    filepath  = os.path.join(directory, object)
     filename  = object
 
     existed_objs = [obj.name for obj in bpy.data.objects]
