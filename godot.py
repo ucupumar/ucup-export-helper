@@ -445,6 +445,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
         # To store actions
         actions = []
         baked_actions = []
+        original_frame_end = context.scene.frame_end
 
         # Go to pose mode
         bpy.ops.object.mode_set(mode='POSE')
@@ -502,6 +503,9 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                     frame_end = int(action.frame_range[1])
                 if action_props.enable_loop and action_props.enable_skip_last_frame and not action.use_frame_range:
                     frame_end -= 1
+
+                if frame_end > context.scene.frame_end:
+                    context.scene.frame_end = frame_end
 
                 print("INFO: Baking action '" + action_name + "'...")
 
@@ -589,6 +593,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
         for action in baked_actions:
             bpy.data.actions.remove(action)
 
+        context.scene.frame_end = original_frame_end
         # Recover original action names
         for action in bpy.data.actions:
             if action.name.endswith(TEMP_SUFFIX):
