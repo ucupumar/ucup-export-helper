@@ -29,8 +29,8 @@ def export_gltf(filepath, scene_props, export_materials='EXPORT'):
             #export_draco_color_quantization=10, 
             #export_draco_generic_quantization=12, 
             export_tangents = scene_props.export_tangent,
-            export_materials=export_materials, 
-            export_colors = scene_props.export_vcols,
+            export_materials=export_materials,
+            # export_colors = scene_props.export_vcols,
             use_mesh_edges=False, 
             use_mesh_vertices=False, 
             export_cameras=False, 
@@ -853,10 +853,10 @@ class SceneGodotRigifyProps(bpy.types.PropertyGroup):
             name = 'GLTF Format',
             description = 'GLTF format',
             items = (
-                ('GLTF_EMBEDDED', 'GLTF Embedded', 'GLTF Embedded'),
+                ('GLB', 'GLTF Embedded', 'GLTF Embedded'),
                 ('GLTF_SEPARATE', 'GLTF Separate', 'GLTF Separate'),
                 ),
-            default = 'GLTF_EMBEDDED')
+            default = 'GLB')
 
     remove_whitespaces : bpy.props.BoolProperty(
             name="Remove Whitespaces",
