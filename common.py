@@ -131,14 +131,14 @@ def make_root_constraint(context, rigify_object, export_rig_object):
     rigify_object.data.pose_position = 'REST'
 
     # Object constraint
-    bpy.ops.object.constraint_add(type='CHILD_OF')
+    child_of = bpy.ops.object.constraint_add(type='CHILD_OF')
     export_rig_object.constraints['Child Of'].target = rigify_object
     export_rig_object.constraints['Child Of'].subtarget = 'root'
 
     # Context copy for inverse child of constraint
     context_copy = bpy.context.copy()
     context_copy['constraint'] = export_rig_object.constraints['Child Of']
-    bpy.ops.constraint.childof_set_inverse(context_copy, constraint="Child Of", owner='OBJECT')
+    bpy.ops.constraint.childof_set_inverse(constraint="Child Of", owner='OBJECT')
 
     # Revert rigify pose
     rigify_object.data.pose_position = 'POSE'
@@ -175,10 +175,15 @@ def make_constraint(context, rig_object, export_rig_object):
         if bone_name.endswith(COPY_SUFFIX):
             target_bone_name = target_bone_name.replace(COPY_SUFFIX, '')
         
-        bpy.ops.pose.constraint_add(type="COPY_LOCATION")
-        bpy.ops.pose.constraint_add(type="COPY_ROTATION")
-        bpy.ops.pose.constraint_add(type="COPY_SCALE")
-        
+        # bpy.ops.pose.constraint_add(type="COPY_LOCATION")
+        # bpy.ops.pose.constraint_add(type="COPY_ROTATION")
+        # bpy.ops.pose.constraint_add(type="COPY_SCALE")
+        pose_bones[bone_name].constraints.new(type="COPY_LOCATION")
+        pose_bones[bone_name].constraints.new(type="COPY_ROTATION")
+        pose_bones[bone_name].constraints.new(type="COPY_SCALE")
+
+
+
         # Add constraint target based by rig source object
         pose_bones[bone_name].constraints["Copy Location"].target = rig_object
         pose_bones[bone_name].constraints["Copy Location"].subtarget = target_bone_name
@@ -273,11 +278,13 @@ def extract_export_rig(context, source_object, scale, use_rigify=False, unparent
         if not bone.use_deform and not b.ue4h_props.force_export:
             edit_bones.remove(bone)
     
+    export_rig_ob.data.collections_all['DEF'].is_solo = True
+
     # Change active bone layers to layer 0
-    for bone in edit_bones:
-        for i, layer in enumerate(bone.layers):
-            if i == 0: bone.layers[i] = True
-            else: bone.layers[i] = False
+    # for bone in edit_bones:
+    #     for i, layer in enumerate(bone.layers):
+    #         if i == 0: bone.layers[i] = True
+    #         else: bone.layers[i] = False
 
     # Cleaning up unused bones based usage of meshes
     # Usually for deleting hand palm bones and some others
@@ -288,9 +295,9 @@ def extract_export_rig(context, source_object, scale, use_rigify=False, unparent
     #            edit_bones.remove(bone)
 
     # Change active armature layers to layer 0
-    for i, layer in enumerate(export_rig.layers):
-        if i == 0: export_rig.layers[i] = True
-        else: export_rig.layers[i] = False
+    # for i, layer in enumerate(export_rig.layers):
+    #     if i == 0: export_rig.layers[i] = True
+    #     else: export_rig.layers[i] = False
 
     # Go to pose mode
     bpy.ops.object.mode_set(mode='POSE')
