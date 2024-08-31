@@ -131,7 +131,7 @@ def make_root_constraint(context, rigify_object, export_rig_object):
     rigify_object.data.pose_position = 'REST'
 
     # Object constraint
-    child_of = bpy.ops.object.constraint_add(type='CHILD_OF')
+    bpy.ops.object.constraint_add(type='CHILD_OF')
     export_rig_object.constraints['Child Of'].target = rigify_object
     export_rig_object.constraints['Child Of'].subtarget = 'root'
 
