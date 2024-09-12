@@ -219,7 +219,7 @@ def get_deform_bones(obj, bone_name):
     return bones
 
 def get_deform_edit_bones(obj, bone_name):
-    bones = [b for b in obj.data.edit_bones if bone_name in b.name and 'DEF-' in b.name]
+    bones = [b for b in obj.data.edit_bones if 'DEF-'+bone_name == b.name]
 
     if len(bones) == 1:
         pass
