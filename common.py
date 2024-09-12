@@ -109,8 +109,8 @@ def merge_vg(obj, vg1_name, vg2_name):
     for v in obj.data.vertices:
         for vg in v.groups:
             if vg.group == vg2_index:
-                print(v.index)
-                print(vg.weight)
+                # print(v.index)
+                # print(vg.weight)
                 obj.vertex_groups[vg1_index].add([v.index],vg.weight,'ADD')
                 
     vg2 = obj.vertex_groups.get(vg2_name)
@@ -251,12 +251,14 @@ def extract_export_rig(context, source_object, scale, use_rigify=False, unparent
     bpy.ops.object.select_all(action='DESELECT')
     set_active(export_rig_ob)
     select_set(export_rig_ob, True)
+    select_set(source_object, True)
 
     # Go to armature edit mode
     bpy.ops.object.mode_set(mode='EDIT')
     
     # Edit bones
     edit_bones = export_rig.edit_bones
+    source_edit_bones = source_object.data.edit_bones
     
     # Rearrange parent (RIGIFY ONLY)
     if use_rigify:
@@ -265,10 +267,7 @@ def extract_export_rig(context, source_object, scale, use_rigify=False, unparent
                 parent_name = bone.parent.name.replace('ORG-', 'DEF-')
                 parent = edit_bones.get(parent_name)
                 bone.parent = parent
-    
-    if unparent_all:
-        for bone in edit_bones:
-            bone.parent = None
+                print(bone.name, bone.parent.name)
 
     # Delete other than deform bones
     for bone in edit_bones:
@@ -278,6 +277,13 @@ def extract_export_rig(context, source_object, scale, use_rigify=False, unparent
         if not bone.use_deform and not b.ue4h_props.force_export:
             edit_bones.remove(bone)
     
+    if unparent_all:
+        for bone in edit_bones:
+            bname = bone.name
+            if (bname in source_edit_bones):
+                if (source_edit_bones[bname].gr_props.keep_parent == False):
+                    bone.parent = None
+
     export_rig_ob.data.collections_all['DEF'].is_solo = True
 
     # Change active bone layers to layer 0
@@ -313,7 +319,7 @@ def extract_export_rig(context, source_object, scale, use_rigify=False, unparent
     #    print(driver.data_path)
     export_rig_ob.animation_data_clear()
 
-    # Remove rig_id used by rigify rig_ui.py (RIGIFY ONLY)
+        # Remove rig_id used by rigify rig_ui.py (RIGIFY ONLY)
     #if use_rigify:
     #    bpy.ops.wm.properties_remove(data_path = 'active_object.data', property = 'rig_id')
 
@@ -371,7 +377,6 @@ def extract_export_meshes(context, mesh_objects, export_rig_ob, scale, only_expo
     for obj in mesh_objects:
 
         #new_obj = scene.objects.active
-        obj_props = obj.gr_props
         obj_name = obj.name
         obj.name += TEMP_SUFFIX
 

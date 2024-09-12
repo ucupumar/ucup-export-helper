@@ -218,6 +218,162 @@ def get_deform_bones(obj, bone_name):
 
     return bones
 
+def get_deform_edit_bones(obj, bone_name):
+    bones = [b for b in obj.data.edit_bones if bone_name in b.name and 'DEF-' in b.name]
+
+    if len(bones) == 1:
+        pass
+
+    elif bone_name == 'head':
+        bone = obj.data.edit_bones.get('DEF-spine.006')
+        if bone and bone not in bones: bones.append(bone)
+
+    elif bone_name == 'neck':
+        bone = obj.data.edit_bones.get('DEF-spine.005')
+        if bone and bone not in bones: bones.append(bone)
+        bone = obj.data.edit_bones.get('DEF-spine.004')
+        if bone and bone not in bones: bones.append(bone)
+
+    elif bone_name == 'chest':
+        bone = obj.data.edit_bones.get('DEF-spine.003')
+        if bone and bone not in bones: bones.append(bone)
+        bone = obj.data.edit_bones.get('DEF-spine.002')
+        if bone and bone not in bones: bones.append(bone)
+
+    elif bone_name in {'torso', 'hips'}:
+        bone = obj.data.edit_bones.get('DEF-spine.001')
+        if bone and bone not in bones: bones.append(bone)
+        bone = obj.data.edit_bones.get('DEF-spine')
+        if bone and bone not in bones: bones.append(bone)
+        bone = obj.data.edit_bones.get('DEF-pelvis.L')
+        if bone and bone not in bones: bones.append(bone)
+        bone = obj.data.edit_bones.get('DEF-pelvis.R')
+        if bone and bone not in bones: bones.append(bone)
+
+    elif 'tweak_spine' in bone_name:
+        bname = bone_name.replace('tweak_', '')
+        bbones = [b for b in obj.data.edit_bones if bname in b.name and 'DEF-' in b.name]
+        for bone in bbones: 
+            if bone and bone not in bones: bones.append(bone)
+
+    elif 'upper_arm' in bone_name:
+        bbones = []
+        if '.L' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-upper_arm.L' in b.name]
+        elif '.R' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-upper_arm.R' in b.name]
+        for bone in bbones: 
+            if bone and bone not in bones: bones.append(bone)
+
+    elif 'forearm' in bone_name:
+        bbones = []
+        if '.L' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-forearm.L' in b.name]
+        if '.R' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-forearm.R' in b.name]
+        for bone in bbones: 
+            if bone and bone not in bones: bones.append(bone)
+
+    elif 'hand' in bone_name:
+        bone = None
+        if '.L' in bone_name:
+            bone = obj.data.edit_bones.get('DEF-hand.L')
+        if '.R' in bone_name:
+            bone = obj.data.edit_bones.get('DEF-hand.L')
+        if bone and bone not in bones: bones.append(bone)
+
+    elif 'palm' in bone_name:
+        bbones = []
+        if '.L' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-palm' in b.name and '.L' in b.name]
+        if '.R' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-palm' in b.name and '.R' in b.name]
+        for bone in bbones: 
+            if bone and bone not in bones: bones.append(bone)
+
+    elif 'thumb' in bone_name:
+        bbones = []
+        if '.L' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-thumb' in b.name and '.L' in b.name]
+        if '.R' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-thumb' in b.name and '.R' in b.name]
+        for bone in bbones: 
+            if bone and bone not in bones: bones.append(bone)
+
+    elif 'f_index' in bone_name:
+        bbones = []
+        if '.L' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-f_index' in b.name and '.L' in b.name]
+        if '.R' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-f_index' in b.name and '.R' in b.name]
+        for bone in bbones: 
+            if bone and bone not in bones: bones.append(bone)
+
+    elif 'f_middle' in bone_name:
+        bbones = []
+        if '.L' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-f_middle' in b.name and '.L' in b.name]
+        if '.R' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-f_middle' in b.name and '.R' in b.name]
+        for bone in bbones: 
+            if bone and bone not in bones: bones.append(bone)
+
+    elif 'f_ring' in bone_name:
+        bbones = []
+        if '.L' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-f_ring' in b.name and '.L' in b.name]
+        if '.R' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-f_ring' in b.name and '.R' in b.name]
+        for bone in bbones: 
+            if bone and bone not in bones: bones.append(bone)
+
+    elif 'f_pinky' in bone_name:
+        bbones = []
+        if '.L' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-f_pinky' in b.name and '.L' in b.name]
+        if '.R' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-f_pinky' in b.name and '.R' in b.name]
+        for bone in bbones: 
+            if bone and bone not in bones: bones.append(bone)
+
+    elif 'thigh' in bone_name:
+        bbones = []
+        if '.L' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-thigh.L' in b.name]
+        elif '.R' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-thigh.R' in b.name]
+        for bone in bbones: 
+            if bone and bone not in bones: bones.append(bone)
+
+    elif 'shin' in bone_name:
+        bbones = []
+        if '.L' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-shin.L' in b.name]
+        if '.R' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-shin.R' in b.name]
+        for bone in bbones: 
+            if bone and bone not in bones: bones.append(bone)
+
+    elif 'foot' in bone_name:
+        bbones = []
+        if '.L' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-foot.L' in b.name]
+        if '.R' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-foot.R' in b.name]
+        for bone in bbones: 
+            if bone and bone not in bones: bones.append(bone)
+
+    elif 'toe' in bone_name:
+        bbones = []
+        if '.L' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-toe.L' in b.name]
+        if '.R' in bone_name:
+            bbones = [b for b in obj.data.edit_bones if 'DEF-toe.R' in b.name]
+        for bone in bbones: 
+            if bone and bone not in bones: bones.append(bone)
+
+    return bones
+
 def copy_some_bones(rig_object, active_export_rig_ob):
 
     ori_mode = active_export_rig_ob.mode
@@ -617,7 +773,6 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                     if not mat or not mat.node_tree: continue
                     for n in mat.node_tree.nodes:
                         if n.type == 'GROUP' and n.node_tree:
-
                             if ((n.node_tree in ori_not_use_baked and n.node_tree not in already_not_use_baked) or
                                 (n.node_tree in ori_not_use_baked_outside and n.node_tree not in already_not_use_baked_outside)
                                 ):
@@ -633,6 +788,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                             if n.node_tree in ori_not_use_baked_outside and n.node_tree not in already_not_use_baked_outside:
                                 n.node_tree.yp.enable_baked_outside = False
                                 already_not_use_baked_outside.append(n.node_tree)
+                            break
 
                 select_set(ob, False)
 
@@ -788,7 +944,6 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
                     icon = 'PREFERENCES'
                     rr.operator('scene.toggle_godot_rigify_options', text='', icon=icon).prop = 'show_posebone_export_options'
 
-                    bone_name = ''
                     r.label(text='Bone Settings (' + pb.name + ')')
 
                     if scene_props.show_posebone_export_options:
@@ -800,6 +955,31 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
                             ccol.prop(db.gr_props, 'add_extra_copy_bone', text=title)
                         if len(def_bones) == 0:
                             ccol.label(text='No related deform bones found!')
+            
+            if obj and obj.mode == 'EDIT':
+                active_bone = obj.data.edit_bones.active
+                if active_bone:
+                    eb = obj.data.edit_bones.get(active_bone.name)
+
+                    def_bones = get_deform_edit_bones(obj, eb.name)
+
+                    r = subcol.row()
+                    rr = r.row(align=True)
+                    if scene_props.show_editbone_export_options: rr.alert = True
+                    icon = 'PREFERENCES'
+                    rr.operator('scene.toggle_godot_rigify_options', text='', icon=icon).prop = 'show_editbone_export_options'
+
+                    r.label(text='Bone Settings (' + eb.name + ')')
+
+                    if scene_props.show_editbone_export_options:
+                        ssubbox = subcol.box()
+                        ccol = ssubbox.column(align=True)
+                        for db in def_bones:
+                            title = 'Force Keep Parent'
+                            title += ' (' + db.name + ')'
+                            ccol.prop(db.gr_props, 'keep_parent', text=title)
+                        if len(def_bones) == 0:
+                            ccol.label(text='No related deform bones found!')
 
         #c = self.layout.column(align=True)
         #r = c.row(align=True)
@@ -809,6 +989,7 @@ class SceneGodotRigifyProps(bpy.types.PropertyGroup):
     show_rig_export_options : BoolProperty(default=False)
     show_object_export_options : BoolProperty(default=False)
     show_posebone_export_options : BoolProperty(default=False)
+    show_editbone_export_options : BoolProperty(default=False)
 
     export_meshes : BoolProperty(default=True, 
             name='Export Meshes', description='Export all meshes used by the rigify rig')
@@ -872,6 +1053,11 @@ class PoseBoneGodotRigifyProps(bpy.types.PropertyGroup):
     add_extra_copy_bone : BoolProperty(default=False,
             name='Add Extra Copy Bone', 
             description='Add extra copy bone on exported rig')
+    
+class EditBoneGodotRigifyProps(bpy.types.PropertyGroup):
+    keep_parent : BoolProperty(default=False,
+            name='Keep Bone Parent', 
+            description='Keep Bone Parent for remove parent options')
 
 def register():
     bpy.utils.register_class(ExportRigifyGLTF)
@@ -880,10 +1066,12 @@ def register():
     bpy.utils.register_class(SceneGodotRigifyProps)
     bpy.utils.register_class(ObjectGodotRigifyProps)
     bpy.utils.register_class(PoseBoneGodotRigifyProps)
+    bpy.utils.register_class(EditBoneGodotRigifyProps)
 
     bpy.types.Scene.gr_props = PointerProperty(type=SceneGodotRigifyProps)
     bpy.types.Object.gr_props = PointerProperty(type=ObjectGodotRigifyProps)
     bpy.types.PoseBone.gr_props = PointerProperty(type=PoseBoneGodotRigifyProps)
+    bpy.types.EditBone.gr_props = PointerProperty(type=EditBoneGodotRigifyProps)
 
 def unregister():
     bpy.utils.unregister_class(ExportRigifyGLTF)
@@ -892,3 +1080,4 @@ def unregister():
     bpy.utils.unregister_class(SceneGodotRigifyProps)
     bpy.utils.unregister_class(ObjectGodotRigifyProps)
     bpy.utils.unregister_class(PoseBoneGodotRigifyProps)
+    bpy.utils.unregister_class(EditBoneGodotRigifyProps)
