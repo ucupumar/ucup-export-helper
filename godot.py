@@ -401,6 +401,14 @@ def copy_some_bones(rig_object, active_export_rig_ob):
 
     bpy.ops.object.mode_set(mode=ori_mode)
 
+def keep_parent_update(self, context: bpy.types.Context):
+    edit_bones = context.selected_bones
+    if len(edit_bones)>1 : 
+        for bone in edit_bones:
+            def_bone = get_deform_edit_bones(context.active_object, bone.name)
+            if len(def_bone)>0:
+                def_bone[0].gr_props["keep_parent"] = self.keep_parent
+
 class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
     bl_idname = "export_mesh.rigify_gltf"
     bl_label = "Export Godot Skeleton"
@@ -771,11 +779,11 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                 for i, ms in enumerate(ob.material_slots):
                     mat = ms.material
                     if not mat or not mat.node_tree: continue
-                    nodes = []
+                    node_names = []
                     for n in mat.node_tree.nodes:
-                        if n.type == 'GROUP' : nodes.append(n.name)
-                    for node in nodes:
-                        n = mat.node_tree.nodes.get(node)
+                        if n.type == 'GROUP' : node_names.append(n.name)
+                    for node_name in node_names:
+                        n = mat.node_tree.nodes.get(node_name)
                         if n.type == 'GROUP' and n.node_tree:
                             if ((n.node_tree in ori_not_use_baked and n.node_tree not in already_not_use_baked) or
                                 (n.node_tree in ori_not_use_baked_outside and n.node_tree not in already_not_use_baked_outside)
@@ -1060,7 +1068,8 @@ class PoseBoneGodotRigifyProps(bpy.types.PropertyGroup):
 class EditBoneGodotRigifyProps(bpy.types.PropertyGroup):
     keep_parent : BoolProperty(default=False,
             name='Keep Bone Parent', 
-            description='Keep Bone Parent for remove parent options')
+            description='Keep Bone Parent for remove parent options',
+            update=keep_parent_update)
 
 def register():
     bpy.utils.register_class(ExportRigifyGLTF)
