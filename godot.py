@@ -771,7 +771,11 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                 for i, ms in enumerate(ob.material_slots):
                     mat = ms.material
                     if not mat or not mat.node_tree: continue
-                    for n in mat.node_tree.nodes:
+                    nodes = []
+                    for n in mat.node_tree.nodes: nodes.append(n.name)
+                    for node in nodes:
+                        n = mat.node_tree.nodes.get(node)
+                        if (not n): continue
                         if n.type == 'GROUP' and n.node_tree:
                             if ((n.node_tree in ori_not_use_baked and n.node_tree not in already_not_use_baked) or
                                 (n.node_tree in ori_not_use_baked_outside and n.node_tree not in already_not_use_baked_outside)
@@ -788,7 +792,6 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                             if n.node_tree in ori_not_use_baked_outside and n.node_tree not in already_not_use_baked_outside:
                                 n.node_tree.yp.enable_baked_outside = False
                                 already_not_use_baked_outside.append(n.node_tree)
-                            break
 
                 select_set(ob, False)
 
