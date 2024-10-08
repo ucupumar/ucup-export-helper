@@ -414,8 +414,8 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
     bl_label = "Export Godot Skeleton"
     bl_description = "Export rigify mesh as GLTF file"
     bl_options = {'REGISTER', 'UNDO'}
-    filename_ext = ".gltf"
-    filter_glob : StringProperty(default="*.gltf", options={'HIDDEN'})
+    filename_ext = ".glb"
+    filter_glob : StringProperty(default="*.glb, *.gltf", options={'HIDDEN'})
 
     #custom_directory = StringProperty(default='')
 
@@ -424,9 +424,13 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
         return get_current_armature_object()
 
     def invoke(self, context, event):
-
         obj =  get_current_armature_object()
         scene_props = context.scene.gr_props
+
+        if scene_props.gltf_format == "GLTF_SEPARATE" :
+            self.filename_ext = ".gltf"
+        elif scene_props.gltf_format == "GLB":
+            self.filename_ext = ".glb"
 
         directory = os.path.dirname(self.filepath)
         filename = os.path.splitext(os.path.basename(context.blend_data.filepath))[0]
