@@ -57,6 +57,7 @@ def export_gltf(filepath, scene_props, export_materials='EXPORT'):
             export_morph_normal=True, 
             export_morph_tangent=True, 
             export_lights=False, 
+            export_sampling_interpolation_fallback=scene_props.export_sampling_interpolation_fallback,
             #export_displacement=False, 
             #will_save_settings=False, 
             #filter_glob='*.glb;*.gltf'
@@ -926,6 +927,8 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
 
             col.prop(scene_props, 'remove_whitespaces')
 
+            col.prop(scene_props, 'export_sampling_interpolation_fallback')
+
             # For object settings
             subbox = box.box()
             subcol = subbox.column(align=False)
@@ -1059,6 +1062,15 @@ class SceneGodotRigifyProps(bpy.types.PropertyGroup):
             description="Remove whitespaces from saved names",
             default=False
             )
+    
+    export_sampling_interpolation_fallback : EnumProperty(
+        name= ' export sampling interpolation fallback',
+        description= '',
+        items= (
+            ('LINEAR', 'Linear', 'Linear Interpolation'), ('STEP', 'Step', 'Stepping Interpolation')
+        ),
+        default= 'LINEAR'
+    )
 
 class ObjectGodotRigifyProps(bpy.types.PropertyGroup):
     add_clear_location_duplicate : BoolProperty(default=False,
