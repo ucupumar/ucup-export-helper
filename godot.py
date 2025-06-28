@@ -486,6 +486,19 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
             state.load(context)
             return{'CANCELLED'}
 
+        if not scene_props.export_apply_transform:
+            #remember rig object transformation
+            armature_quaternions = rig_object.rotation_quaternion.copy()
+            armature_euler = rig_object.rotation_euler.copy()
+            armature_location = rig_object.location.copy()
+            armature_scale = rig_object.scale.copy()
+
+            #reset rig translation
+            rig_object.location = (0.0,0.0,0.0)
+            rig_object.rotation_quaternion = Quaternion((1.0, 0.0, 0.0, 0.0))
+            rig_object.rotation_euler = (0.0,0.0,0.0)
+            rig_object.scale = (1.0,1.0,1.0)
+
         if scene_props.export_animations and scene_props.export_only_selected_action:
             if not rig_object.animation_data or not rig_object.animation_data.action:
                 self.report({'ERROR'}, 'No active action used on the rig!')
@@ -811,6 +824,13 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
         # Load original state
         state.load(context)
 
+        if not scene_props.export_apply_transform:
+            # recover object translation
+            rig_object.rotation_quaternion = armature_quaternions
+            rig_object.rotation_euler = armature_euler
+            rig_object.location = armature_location
+            rig_object.scale = armature_scale
+
         # Recover bone matrices and active action
         for pb in rig_object.pose.bones:
             pb.rotation_quaternion = quaternions[pb.name]
@@ -926,6 +946,7 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
             row.prop(scene_props, 'gltf_format', text='')
 
             col.prop(scene_props, 'remove_whitespaces')
+            col.prop(scene_props, 'export_apply_transform')
 
             col.prop(scene_props, 'export_sampling_interpolation_fallback')
 
@@ -1070,6 +1091,12 @@ class SceneGodotRigifyProps(bpy.types.PropertyGroup):
             ('LINEAR', 'Linear', 'Linear Interpolation'), ('STEP', 'Step', 'Stepping Interpolation')
         ),
         default= 'LINEAR'
+    )
+
+    export_apply_transform : bpy.props.BoolProperty(
+        name="Apply Transform",
+        description="Apply Transform",
+        default=False
     )
 
 class ObjectGodotRigifyProps(bpy.types.PropertyGroup):
