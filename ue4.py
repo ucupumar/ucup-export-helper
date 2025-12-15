@@ -913,7 +913,7 @@ class UE4HELPER_PT_SkeletalPanel(bpy.types.Panel):
         r = c.row(align=True)
         r.operator('export_mesh.rigify_fbx', text='Export Skeletal Mesh', icon='MOD_ARMATURE')
         if scene_props.show_rig_export_options: r.alert = True
-        icon = 'PREFERENCES' if is_greater_than_280() else 'SCRIPTWIN'
+        icon = 'PREFERENCES' if is_bl_newer_than(2, 80) else 'SCRIPTWIN'
         r.operator('scene.toggle_ue4_helper_options', text='', icon=icon).prop = 'show_rig_export_options'
 
         if scene_props.show_rig_export_options:
@@ -942,7 +942,7 @@ class UE4HELPER_PT_SkeletalPanel(bpy.types.Panel):
         #r.operator("export_anim.rigify_fbx", text="Export current action", icon='ACTION_TWEAK')
         r.operator("export_anim.rigify_fbx", text="Export current action", icon='ACTION')
         if scene_props.show_action_export_options: r.alert = True
-        icon = 'PREFERENCES' if is_greater_than_280() else 'SCRIPTWIN'
+        icon = 'PREFERENCES' if is_bl_newer_than(2, 80) else 'SCRIPTWIN'
         r.operator('scene.toggle_ue4_helper_options', text='', icon=icon).prop = 'show_action_export_options'
         if scene_props.show_action_export_options:
             box = c.box()

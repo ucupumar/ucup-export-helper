@@ -695,7 +695,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                 bpy.ops.nla.bake(
                         frame_start=frame_start,
                         frame_end=frame_end,
-                        only_selected=True, 
+                        only_selected=False, #True,
                         visual_keying=True, 
                         clear_constraints=True, 
                         use_current_action=True, 
