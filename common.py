@@ -4,38 +4,36 @@ from mathutils import *
 TEMP_SUFFIX = '__TEMP__'
 COPY_SUFFIX = '.COPY'
 
-def is_greater_than_280():
-    if bpy.app.version >= (2, 80, 0):
-        return True
-    return False
+def is_bl_newer_than(major, minor=0, patch=0):
+    return bpy.app.version >= (major, minor, patch)
 
 def link_object(scene, obj):
-    if is_greater_than_280():
+    if is_bl_newer_than(2, 80):
         scene.collection.objects.link(obj)
     else: scene.objects.link(obj)
 
 def select_get(obj):
-    if is_greater_than_280():
+    if is_bl_newer_than(2, 80):
         return obj.select_get()
     return obj.select
 
 def select_set(obj, val):
-    if is_greater_than_280():
+    if is_bl_newer_than(2, 80):
         obj.select_set(val)
     else: obj.select = val
 
 def set_active(obj):
-    if is_greater_than_280():
+    if is_bl_newer_than(2, 80):
         bpy.context.view_layer.objects.active = obj
     else: bpy.context.scene.objects.active = obj
 
 def cursor_location_get():
-    if is_greater_than_280():
+    if is_bl_newer_than(2, 80):
         return bpy.context.scene.cursor.location
     return bpy.context.scene.cursor_location
 
 def get_instance_collection(obj):
-    if is_greater_than_280():
+    if is_bl_newer_than(2, 80):
         return obj.instance_collection
     return obj.dupli_group
 
@@ -115,6 +113,47 @@ def merge_vg(obj, vg1_name, vg2_name):
                 
     vg2 = obj.vertex_groups.get(vg2_name)
     obj.vertex_groups.remove(vg2)
+
+def new_action_fcurve(action, data_path):
+    if not is_bl_newer_than(5):
+        return action.fcurves.new(data_path=data_path) #, index=2)
+
+    from bpy_extras import anim_utils
+
+    # Create new action slot
+    slot = action.slots.new(id_type=obj.id_type, name=obj.name)
+
+    # Ensure channelbag
+    channelbag = anim_utils.action_ensure_channelbag_for_slot(action, slot)
+    return channelbag.fcurves.new(data_path) #,index=2)
+
+def remove_action_fcurve(action, fcurve):
+    if not is_bl_newer_than(5):
+        action.fcurves.remove(fcurve)
+        return
+
+    for slot in action.slots:
+        for layer in action.layers:
+            for strip in layer.strips:
+                cb = strip.channelbag(slot)
+                for fc in cb.fcurves:
+                    if fc == fcurve:
+                        cb.fcurves.remove(fc)
+                        return
+
+def get_action_fcurves(action):
+    if not is_bl_newer_than(5):
+        return [fc for fc in action.fcurves]
+
+    from bpy_extras import anim_utils
+
+    fcurves = []
+    for slot in action.slots:
+        channelbag = anim_utils.action_get_channelbag_for_slot(action, slot)
+        for fc in channelbag.fcurves:
+            fcurves.append(fc)
+
+    return fcurves
 
 def make_root_constraint(context, rigify_object, export_rig_object):
 
@@ -243,7 +282,7 @@ def extract_export_rig(context, source_object, scale, use_rigify=False, unparent
     link_object(scene, export_rig_ob)
 
     # Show x-ray for debugging
-    if is_greater_than_280():
+    if is_bl_newer_than(2, 80):
         export_rig_ob.show_in_front = True
     else: export_rig_ob.show_x_ray = True
 
@@ -675,7 +714,7 @@ def reset_pose_bone_props(obj, scene, action):
     foot_l_ik_found = False
     foot_r_ik_found = False
 
-    for fcurve in action.fcurves:
+    for fcurve in get_action_fcurves(action):
 
         if fcurve.data_path == 'pose.bones["upper_arm_parent.L"]["FK_limb_follow"]':
             arm_l_follow_found = True
@@ -757,7 +796,7 @@ def remove_non_transformed_keyframes(action, ignore_object_transform=True, ignor
 
     msgs = []
 
-    for fcurve in action.fcurves:
+    for fcurve in get_action_fcurves(action):
         #print(fcurve.data_path + " channel " + str(fcurve.array_index))
         transformed_key_found = False
 
@@ -801,7 +840,7 @@ def remove_non_transformed_keyframes(action, ignore_object_transform=True, ignor
 
         if not transformed_key_found:
             msgs.append(action.name + ' ' + fcurve.data_path + ' is removed!')
-            action.fcurves.remove(fcurve)
+            remove_action_fcurve(action, fcurve)
 
     return msgs
 
@@ -879,7 +918,7 @@ def apply_modifiers_with_shape_keys(obj, selectedModifiers, disable_armatures=Tr
     ori_action_name = ''
     if obj.data.shape_keys.animation_data and obj.data.shape_keys.animation_data.action:
         ori_action_name = obj.data.shape_keys.animation_data.action.name
-        for fc in obj.data.shape_keys.animation_data.action.fcurves:
+        for fc in get_action_fcurves(obj.data.shape_keys.animation_data.action):
             fc_dic = {}
 
             for prop in dir(fc):
@@ -984,7 +1023,7 @@ def apply_modifiers_with_shape_keys(obj, selectedModifiers, disable_armatures=Tr
         obj.data.shape_keys.animation_data.action = bpy.data.actions.new(name=ori_action_name)
 
         for ofc in ori_fcurves:
-            fcurve = obj.data.shape_keys.animation_data.action.fcurves.new(
+            fcurve = new_action_fcurve(obj.data.shape_keys.animation_data.action,
                 data_path=ofc['data_path'], #index=2
             )
 

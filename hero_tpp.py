@@ -53,7 +53,7 @@ def load_ue4_hero_tpp():
     rig_obj = [obj for obj in bpy.data.objects if obj.name not in existed_objs and obj.name.startswith('HeroTPP_rig')][0]
     mesh_obj = [obj for obj in bpy.data.objects if obj.name not in existed_objs and obj.name.startswith('HeroTPP')][0]
 
-    if is_greater_than_280():
+    if is_bl_newer_than(2, 80):
         scene  = bpy.context.scene
         col = get_set_collection(WIDGET_COLLECTION_NAME, scene.collection)
         #col.hide_viewport = True

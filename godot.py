@@ -892,7 +892,7 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
         r.operator('export_mesh.rigify_gltf', text='Export as GLTF', icon='MOD_ARMATURE')
 
         if scene_props.show_rig_export_options: r.alert = True
-        icon = 'PREFERENCES' # if is_greater_than_280() else 'SCRIPTWIN'
+        icon = 'PREFERENCES' # if is_bl_newer_than(2, 80) else 'SCRIPTWIN'
         r.operator('scene.toggle_godot_rigify_options', text='', icon=icon).prop = 'show_rig_export_options'
 
         if scene_props.show_rig_export_options:

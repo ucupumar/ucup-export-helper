@@ -332,7 +332,7 @@ def draw_action_manager(self, context):
     rr = r.row()
 
     if scene_props.show_global_settings: rr.alert = True
-    icon = 'PREFERENCES' # if is_greater_than_280() else 'SCRIPTWIN'
+    icon = 'PREFERENCES' # if is_bl_newer_than(2, 80) else 'SCRIPTWIN'
     rr.operator('scene.y_toggle_action_global_settings', text='', icon=icon).prop = 'show_global_settings'
 
     #r.label(text='Action Manager Settings:', icon='PREFERENCES')
@@ -483,7 +483,7 @@ def update_action(self, context):
 
         # Get all bone names related to action
         bone_names = []
-        for fcurve in action.fcurves:
+        for fcurve in get_action_fcurves(action):
             if fcurve.group and fcurve.group.name not in bone_names:
                 bone_names.append(fcurve.group.name)
 
