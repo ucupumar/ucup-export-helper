@@ -10,12 +10,12 @@ bl_info = {
 }
 
 if "bpy" in locals():
-    import imp
-    imp.reload(common)
-    imp.reload(ue4)
-    imp.reload(godot)
-    imp.reload(actions)
-    imp.reload(hero_tpp)
+    import importlib
+    importlib.reload(common)
+    importlib.reload(ue4)
+    importlib.reload(godot)
+    importlib.reload(actions)
+    importlib.reload(hero_tpp)
 else:
     from . import common, ue4, godot, actions, hero_tpp
 
