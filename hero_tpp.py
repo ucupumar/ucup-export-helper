@@ -30,52 +30,27 @@ def load_rigify_script():
 
 def load_ue4_hero_tpp():
 
-    filepath = get_addon_filepath() + 'lib.blend'
-    armature_name = 'HeroTPP_rig'
+    blendfile = get_addon_filepath() + 'lib.blend'
+    mesh_obj = None
+    metarig_obj = None
+
+    metarig_name = 'hero_metarig'
     mesh_name = 'HeroTPP'
 
-    blendfile = get_addon_filepath() + 'lib.blend'
-    section   = "Object"
-    object    = "HeroTPP"
+    with bpy.data.libraries.load(blendfile, link=False) as (data_from, data_to):
+        data_to.objects = [name for name in data_from.objects if name in {metarig_name, mesh_name}]
     
-    directory = os.path.join(blendfile, section)
-    filepath  = os.path.join(directory, object)
-    filename  = object
+    # 2. Link the imported object to the active scene collection
+    for obj in data_to.objects:
+        if obj is not None:
+            bpy.context.collection.objects.link(obj)
 
-    existed_objs = [obj.name for obj in bpy.data.objects]
+            if obj.name.startswith(mesh_name):
+                mesh_obj = obj
+            elif obj.name.startswith(metarig_name):
+                metarig_obj = obj
     
-    bpy.ops.wm.append(
-        filepath=filepath, 
-        filename=filename,
-        directory=directory)
-
-    wgt_objs = [obj for obj in bpy.data.objects if obj.name not in existed_objs and obj.name.startswith('WGT')]
-    rig_obj = [obj for obj in bpy.data.objects if obj.name not in existed_objs and obj.name.startswith('HeroTPP_rig')][0]
-    mesh_obj = [obj for obj in bpy.data.objects if obj.name not in existed_objs and obj.name.startswith('HeroTPP')][0]
-
-    if is_bl_newer_than(2, 80):
-        scene  = bpy.context.scene
-        col = get_set_collection(WIDGET_COLLECTION_NAME, scene.collection)
-        #col.hide_viewport = True
-        #col.hide_render = True
-        for wgt_obj in wgt_objs:
-            ori_col = wgt_obj.users_collection
-            if ori_col: ori_col[0].objects.unlink(wgt_obj)
-            col.objects.link(wgt_obj)
-        
-        # Exclude widget collections
-        col = bpy.context.view_layer.layer_collection.children.get(WIDGET_COLLECTION_NAME)
-        col.exclude = True
-    else:
-        for wgt_obj in wgt_objs:
-            wgt_obj.layers[19] = True
-            for i in range(19):
-                wgt_obj.layers[i] = False
-
-    script = load_rigify_script()
-    exec(script.as_string(), {})
-
-    return rig_obj, mesh_obj
+    return metarig_obj, mesh_obj
 
 class AddHeroTPP(bpy.types.Operator):
     bl_idname = "object.add_standard_ue4_tpp"
@@ -88,13 +63,37 @@ class AddHeroTPP(bpy.types.Operator):
         return True
 
     def execute(self, context):
+        if not hasattr(bpy.ops.pose, 'rigify_generate'):
+            self.report({'ERROR'}, "Rigify addon need to be installed!")
+            return {'CANCELLED'}
+
         scene = context.scene
-        rig_obj, mesh_obj = load_ue4_hero_tpp()
-        #scene.objects.active = rig_obj
-        set_active(rig_obj)
-        #rig_obj.location = scene.cursor_location.copy()
-        rig_obj.location = cursor_location_get().copy()
-        select_set(mesh_obj, False)
+        metarig_obj, mesh_obj = load_ue4_hero_tpp()
+
+        # Select metarig
+        set_active(metarig_obj)
+        select_set(metarig_obj, True)
+        select_set(mesh_obj, True)
+
+        # Update metarig for Blender 4.0 or above
+        if is_bl_newer_than(4):
+            bpy.ops.armature.rigify_upgrade_layers()
+
+        # Generate rigify
+        bpy.ops.pose.rigify_generate()
+        rig = context.object
+
+        # Set armature
+        mod = mesh_obj.modifiers.get('Armature')
+        if mod: mod.object = rig
+        mesh_obj.parent = rig
+
+        # Set location
+        rig.location = cursor_location_get().copy()
+
+        # Remove metarig
+        bpy.data.objects.remove(metarig_obj)
+
         return {'FINISHED'}
 
 class UE4HELPER_PT_NewObjectsPanel(bpy.types.Panel):

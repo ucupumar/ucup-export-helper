@@ -954,7 +954,7 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
             subbox = box.box()
             subcol = subbox.column(align=False)
             obj = context.object
-            obj_props = obj.gr_props
+            obj_props = obj.gr_props if obj else False
             obj_name = obj.name if obj else '-'
 
             r = subcol.row()
@@ -965,7 +965,7 @@ class GODOTHELPER_PT_RigifySkeletonPanel(bpy.types.Panel):
 
             r.label(text='Object Settings (' + obj_name + ')')
 
-            if scene_props.show_object_export_options:
+            if obj_props and scene_props.show_object_export_options:
                 ssubbox = subcol.box()
                 ssubbox.prop(obj_props, 'add_clear_location_duplicate')
 
