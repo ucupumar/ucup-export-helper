@@ -260,7 +260,7 @@ def get_vertex_group_names(objects):
 #    return mesh_objects
 
 #def extract_export_rig(context, source_object, scale, meshes_to_evaluate = []):
-def extract_export_rig(context, source_object, scale, use_rigify=False, unparent_all=False):
+def extract_export_rig(context, source_object, scale, use_rigify=False, unparent_all=False, use_root_as_bone=False):
 
     scene = context.scene
 
@@ -277,7 +277,11 @@ def extract_export_rig(context, source_object, scale, use_rigify=False, unparent
     export_rig_ob.name =(source_object.name + '_export')
     export_rig_ob.data = export_rig_ob.data.copy()
     export_rig_ob.scale *= scale
-    export_rig_ob.name = 'root'
+    if use_root_as_bone:
+        ori_name = export_rig_ob.name
+        export_rig_ob.name += TEMP_SUFFIX
+        export_rig_ob.name = ori_name
+    else: export_rig_ob.name = 'root'
     export_rig = export_rig_ob.data
     link_object(scene, export_rig_ob)
 
@@ -306,14 +310,14 @@ def extract_export_rig(context, source_object, scale, use_rigify=False, unparent
                 parent_name = bone.parent.name.replace('ORG-', 'DEF-')
                 parent = edit_bones.get(parent_name)
                 bone.parent = parent
-                print(bone.name, bone.parent.name)
+                #print(bone.name, bone.parent.name)
 
     # Delete other than deform bones
     for bone in edit_bones:
         b = export_rig.bones.get(bone.name)
         #if 'DEF-' not in bone.name and bone.name != 'root':
         #if not bone.use_deform and bone.name != 'root':
-        if not bone.use_deform and not b.ue4h_props.force_export:
+        if not bone.use_deform and not b.ue4h_props.force_export and (bone.name != 'root' or not use_root_as_bone):
             edit_bones.remove(bone)
     
     if unparent_all:
@@ -324,6 +328,8 @@ def extract_export_rig(context, source_object, scale, use_rigify=False, unparent
                     bone.parent = None
 
     export_rig_ob.data.collections_all['DEF'].is_solo = True
+    if use_root_as_bone:
+        export_rig_ob.data.collections_all['Root'].is_solo = True
 
     # Change active bone layers to layer 0
     # for bone in edit_bones:

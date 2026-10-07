@@ -527,7 +527,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
 
         # Get export rig
         unparent_all = True if scene_props.parental_mode == 'UNPARENT_ALL' else False
-        export_rig_ob = extract_export_rig(context, rig_object, scale, use_rigify, unparent_all=unparent_all)
+        export_rig_ob = extract_export_rig(context, rig_object, scale, use_rigify, unparent_all=unparent_all, use_root_as_bone=True)
 
         # Set to object mode and deselect all
         if context.mode != 'OBJECT':
