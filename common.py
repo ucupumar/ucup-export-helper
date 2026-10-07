@@ -186,7 +186,13 @@ def make_root_constraint(context, rigify_object, export_rig_object):
     if context.object.mode != ori_mode:
         bpy.ops.object.mode_set(mode=ori_mode)
 
-def make_constraint(context, rig_object, export_rig_object):
+def make_constraint(context, rig_object, export_rig_object, do_object_root_constraint=True,
+    generate_root_motion=True,
+    export_root_motion_loc_x=True,
+    export_root_motion_loc_y=True,
+    export_root_motion_loc_z=False,
+    export_root_motion_rotation=False,
+    ):
 
     ori_mode = context.object.mode
 
@@ -210,35 +216,61 @@ def make_constraint(context, rig_object, export_rig_object):
         bone_name = bone.name
         target_bone_name = bone.name
 
-        # Dealing with bone with copy suffix
-        if bone_name.endswith(COPY_SUFFIX):
-            target_bone_name = target_bone_name.replace(COPY_SUFFIX, '')
-        
-        # bpy.ops.pose.constraint_add(type="COPY_LOCATION")
-        # bpy.ops.pose.constraint_add(type="COPY_ROTATION")
-        # bpy.ops.pose.constraint_add(type="COPY_SCALE")
-        pose_bones[bone_name].constraints.new(type="COPY_LOCATION")
-        pose_bones[bone_name].constraints.new(type="COPY_ROTATION")
-        pose_bones[bone_name].constraints.new(type="COPY_SCALE")
+        if bone_name == 'root' and generate_root_motion:
 
+            # Add root motion using child of constraint
+            pbone = pose_bones[bone_name]
 
+            c = pbone.constraints.new(type="CHILD_OF")
 
-        # Add constraint target based by rig source object
-        pose_bones[bone_name].constraints["Copy Location"].target = rig_object
-        pose_bones[bone_name].constraints["Copy Location"].subtarget = target_bone_name
-        pose_bones[bone_name].constraints["Copy Rotation"].target = rig_object
-        pose_bones[bone_name].constraints["Copy Rotation"].subtarget = target_bone_name
-        pose_bones[bone_name].constraints["Copy Scale"].target = rig_object
-        pose_bones[bone_name].constraints["Copy Scale"].subtarget = target_bone_name
-        pose_bones[bone_name].constraints["Copy Scale"].target_space = 'LOCAL_WITH_PARENT'
-        pose_bones[bone_name].constraints["Copy Scale"].owner_space = 'WORLD'
+            c.target = rig_object
+            c.subtarget = 'DEF-spine'
+            c.use_location_x = export_root_motion_loc_x
+            c.use_location_y = export_root_motion_loc_y
+            c.use_location_z = export_root_motion_loc_z
+            c.use_rotation_x = c.use_rotation_y = c.use_rotation_z = export_root_motion_rotation
+            c.use_scale_x = False
+            c.use_scale_y = False
+            c.use_scale_z = False
+
+            # Reset root position
+            pbone.matrix_basis.identity()
+
+            # Use rest position for the rig object
+            rig_object.data.pose_position = 'REST'
+
+            # Set constraint inverse
+            bpy.ops.constraint.childof_set_inverse(constraint=c.name, owner='BONE')
+
+            # Back to pose
+            rig_object.data.pose_position = 'POSE'
+
+        else:
+            # Dealing with bone with copy suffix
+            if bone_name.endswith(COPY_SUFFIX):
+                target_bone_name = target_bone_name.replace(COPY_SUFFIX, '')
+            
+            pose_bones[bone_name].constraints.new(type="COPY_LOCATION")
+            pose_bones[bone_name].constraints.new(type="COPY_ROTATION")
+            pose_bones[bone_name].constraints.new(type="COPY_SCALE")
+
+            # Add constraint target based by rig source object
+            pose_bones[bone_name].constraints["Copy Location"].target = rig_object
+            pose_bones[bone_name].constraints["Copy Location"].subtarget = target_bone_name
+            pose_bones[bone_name].constraints["Copy Rotation"].target = rig_object
+            pose_bones[bone_name].constraints["Copy Rotation"].subtarget = target_bone_name
+            pose_bones[bone_name].constraints["Copy Scale"].target = rig_object
+            pose_bones[bone_name].constraints["Copy Scale"].subtarget = target_bone_name
+            pose_bones[bone_name].constraints["Copy Scale"].target_space = 'LOCAL_WITH_PARENT'
+            pose_bones[bone_name].constraints["Copy Scale"].owner_space = 'WORLD'
     
     # Back to original mode
     if context.object.mode != ori_mode:
         bpy.ops.object.mode_set(mode=ori_mode)
 
     # Root constraint is really special case
-    make_root_constraint(context, rig_object, export_rig_object)
+    if do_object_root_constraint:
+        make_root_constraint(context, rig_object, export_rig_object)
 
 def get_vertex_group_names(objects):
     vg_names = []
@@ -260,7 +292,7 @@ def get_vertex_group_names(objects):
 #    return mesh_objects
 
 #def extract_export_rig(context, source_object, scale, meshes_to_evaluate = []):
-def extract_export_rig(context, source_object, scale, use_rigify=False, unparent_all=False):
+def extract_export_rig(context, source_object, scale, use_rigify=False, unparent_all=False, use_root_as_bone=False):
 
     scene = context.scene
 
@@ -277,7 +309,11 @@ def extract_export_rig(context, source_object, scale, use_rigify=False, unparent
     export_rig_ob.name =(source_object.name + '_export')
     export_rig_ob.data = export_rig_ob.data.copy()
     export_rig_ob.scale *= scale
-    export_rig_ob.name = 'root'
+    if use_root_as_bone:
+        ori_name = export_rig_ob.name
+        export_rig_ob.name += TEMP_SUFFIX
+        export_rig_ob.name = ori_name
+    else: export_rig_ob.name = 'root'
     export_rig = export_rig_ob.data
     link_object(scene, export_rig_ob)
 
@@ -306,14 +342,14 @@ def extract_export_rig(context, source_object, scale, use_rigify=False, unparent
                 parent_name = bone.parent.name.replace('ORG-', 'DEF-')
                 parent = edit_bones.get(parent_name)
                 bone.parent = parent
-                print(bone.name, bone.parent.name)
+                #print(bone.name, bone.parent.name)
 
     # Delete other than deform bones
     for bone in edit_bones:
         b = export_rig.bones.get(bone.name)
         #if 'DEF-' not in bone.name and bone.name != 'root':
         #if not bone.use_deform and bone.name != 'root':
-        if not bone.use_deform and not b.ue4h_props.force_export:
+        if not bone.use_deform and not b.ue4h_props.force_export and (bone.name != 'root' or not use_root_as_bone):
             edit_bones.remove(bone)
     
     if unparent_all:
@@ -324,6 +360,8 @@ def extract_export_rig(context, source_object, scale, use_rigify=False, unparent
                     bone.parent = None
 
     export_rig_ob.data.collections_all['DEF'].is_solo = True
+    if use_root_as_bone:
+        export_rig_ob.data.collections_all['Root'].is_solo = True
 
     # Change active bone layers to layer 0
     # for bone in edit_bones:

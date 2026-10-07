@@ -527,7 +527,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
 
         # Get export rig
         unparent_all = True if scene_props.parental_mode == 'UNPARENT_ALL' else False
-        export_rig_ob = extract_export_rig(context, rig_object, scale, use_rigify, unparent_all=unparent_all)
+        export_rig_ob = extract_export_rig(context, rig_object, scale, use_rigify, unparent_all=unparent_all, use_root_as_bone=True)
 
         # Set to object mode and deselect all
         if context.mode != 'OBJECT':
@@ -655,7 +655,7 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                     export_rig_ob.animation_data.nla_tracks.remove(track)
 
             # Bake all valid actions
-            for action in actions:
+            for i, action in enumerate(actions):
 
                 action_props = action.rigify_export_props
 
@@ -674,7 +674,13 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                 action.name += TEMP_SUFFIX
 
                 # Make constraint
-                make_constraint(context, rig_object, export_rig_ob)
+                make_constraint(context, rig_object, export_rig_ob, do_object_root_constraint=False,
+                    generate_root_motion=action_props.enable_export_root_motion,
+                    export_root_motion_loc_x = action_props.export_root_motion_loc_x,
+                    export_root_motion_loc_y = action_props.export_root_motion_loc_y,
+                    export_root_motion_loc_z = action_props.export_root_motion_loc_z,
+                    export_root_motion_rotation = action_props.export_root_motion_rotation,
+                )
 
                 # Frame start and end
                 if action.use_frame_range:
@@ -690,6 +696,9 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
                     context.scene.frame_end = frame_end
 
                 print("INFO: Baking action '" + action_name + "'...")
+
+                #if i == 1:
+                #    return {'FINISHED'}
 
                 # Bake animations
                 bpy.ops.nla.bake(
@@ -762,6 +771,8 @@ class ExportRigifyGLTF(bpy.types.Operator, ExportHelper):
         # Select export mesh objects
         for obj in export_mesh_objs:
             select_set(obj, True)
+
+        #return {'FINISHED'}
 
         ## EXPORT!
         # No need to export if there's no meshes or actions

@@ -328,6 +328,15 @@ def draw_action_manager(self, context):
             if action_props.enable_remove_untransformed:
                 bcol.prop(action_props, 'untransformed_tolerance', text='Tolerance')
 
+            bcol.prop(action_props, 'enable_export_root_motion')
+            if action_props.enable_export_root_motion:
+                brow = bcol.row(align=True)
+                brow.prop(action_props, 'export_root_motion_loc_x', toggle=True, text='Loc X')
+                brow.prop(action_props, 'export_root_motion_loc_y', toggle=True, text='Loc Y')
+                brow.prop(action_props, 'export_root_motion_loc_z', toggle=True, text='Loc Z')
+                brow.prop(action_props, 'export_root_motion_rotation', toggle=True, text='Rot')
+
+
     r = col.row()
     rr = r.row()
 
@@ -581,7 +590,7 @@ class YActionRigifyExportActionProps(bpy.types.PropertyGroup):
 
     enable_remove_untransformed : BoolProperty(
             name = 'Remove untransformed Fcurves (Export)',
-            description = 'remove untransformed fcurves at export',
+            description = 'Remove untransformed fcurves at export',
             default = False
             )
 
@@ -589,6 +598,36 @@ class YActionRigifyExportActionProps(bpy.types.PropertyGroup):
             name = 'Untransformed Keyframe Tolerance (Export)',
             description = 'Untransformed keyframe tolerance',
             default = 0.0001
+            )
+
+    enable_export_root_motion : BoolProperty(
+            name = 'Export Generated Root Motion',
+            description = 'Root bone keyframes based of spine bone will be generated when action is exported.',
+            default = True
+            )
+
+    export_root_motion_loc_x : BoolProperty(
+            name = 'Generate X Location of Root Motion',
+            description = 'Generate x location of root motion',
+            default = True
+            )
+
+    export_root_motion_loc_y : BoolProperty(
+            name = 'Generate Y Location of Root Motion',
+            description = 'Generate y location of root motion',
+            default = True
+            )
+
+    export_root_motion_loc_z : BoolProperty(
+            name = 'Generate Z Location of Root Motion',
+            description = 'Generate z location of root motion',
+            default = False
+            )
+
+    export_root_motion_rotation : BoolProperty(
+            name = 'Generate Rotation of Root Motion',
+            description = 'Generate rotation of root motion',
+            default = False
             )
 
 def register():
